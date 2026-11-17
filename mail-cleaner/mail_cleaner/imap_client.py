@@ -34,10 +34,12 @@ KNOWN_SERVERS = {
     "gmx.com": "imap.gmx.net",
     "aol.com": "imap.aol.com",
     "outlook.com": "outlook.office365.com",
+    "outlook.fr": "outlook.office365.com",
     "hotmail.com": "outlook.office365.com",
     "hotmail.fr": "outlook.office365.com",
     "live.fr": "outlook.office365.com",
     "live.com": "outlook.office365.com",
+    "msn.com": "outlook.office365.com",
 }
 
 # Noms de secours si le serveur n'annonce pas les attributs SPECIAL-USE
@@ -45,7 +47,7 @@ FALLBACK_NAMES = {
     "junk": ["[Gmail]/Spam", "Spam", "Junk", "Junk E-mail", "Courrier indésirable",
              "Bulk Mail", "QUARANTAINE", "INBOX.Spam", "INBOX.Junk"],
     "trash": ["[Gmail]/Trash", "[Gmail]/Corbeille", "Trash", "Corbeille",
-              "Deleted Items", "Deleted Messages", "Éléments supprimés", "INBOX.Trash"],
+              "Deleted", "Deleted Items", "Deleted Messages", "Éléments supprimés", "INBOX.Trash"],
     "sent": ["[Gmail]/Sent Mail", "[Gmail]/Messages envoy&AOk-s", "Sent",
              "Sent Messages", "Sent Items", "Envoy&AOk-s", "&AMk-l&AOk-ments envoy&AOk-s",
              "INBOX.Sent", "OUTBOX"],
@@ -79,9 +81,14 @@ class MailItem:
 
 
 class Mailbox:
-    def __init__(self, server: str, address: str, password: str, port: int = 993):
+    def __init__(self, server: str, address: str, password: str | None = None,
+                 port: int = 993, oauth_token: str | None = None):
         self.conn = imaplib.IMAP4_SSL(server, port)
-        self.conn.login(address, password)
+        if oauth_token:
+            from .oauth_ms import xoauth2
+            self.conn.authenticate("XOAUTH2", xoauth2(address, oauth_token))
+        else:
+            self.conn.login(address, password)
         self._folders = self._list_folders()
 
     # -- dossiers ----------------------------------------------------------

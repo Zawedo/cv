@@ -2,7 +2,7 @@
 
 Supprime automatiquement les mails **indésirables** de ta boîte mail : spam, **phishing**, **casino / paris**, arnaques (loterie, faux colis, faux remboursements…), contenu adulte.
 
-- Marche avec **Gmail**, Yahoo, iCloud, Orange, Free, SFR, La Poste, GMX… (tout fournisseur IMAP)
+- Marche avec **Outlook.com / Hotmail / Live**, **Gmail**, Yahoo, iCloud, Orange, Free, SFR, La Poste, GMX… (tout fournisseur IMAP)
 - **Rien à installer** à part Python 3.9 ou plus récent (aucune dépendance)
 - **Sans danger par défaut** : la première fois, l'outil montre seulement ce qu'il supprimerait
 - Les mails vont à la **corbeille**, ils restent récupérables (30 jours sur Gmail)
@@ -44,7 +44,41 @@ Gmail refuse ton mot de passe habituel pour ce type d'outil. Il faut un **mot de
 Tu peux supprimer ce mot de passe d'application à tout moment pour couper l'accès.
 
 > **Yahoo / iCloud / Orange / Free** : même principe. Crée un « mot de passe d'application » dans les paramètres de sécurité de ton compte.
-> **Outlook / Hotmail** : Microsoft n'accepte plus la connexion par mot de passe en IMAP, donc l'outil ne fonctionne pas avec ces comptes pour l'instant.
+
+## Pour Outlook.com / Hotmail / Live : connexion Microsoft
+
+Microsoft n'accepte plus les mots de passe pour ce type d'outil : on passe par la connexion officielle « Se connecter avec Microsoft ». Ton mot de passe reste sur le site de Microsoft, l'outil ne le voit jamais.
+
+### A. Activer l'IMAP (1 minute)
+
+Outlook.com → ⚙️ Paramètres → **Courrier** → **Transfert et IMAP** → active **« Autoriser les appareils et applications à utiliser IMAP »** → Enregistrer.
+
+### B. Créer l'application Microsoft (5 minutes, une seule fois)
+
+1. Va sur https://entra.microsoft.com et connecte-toi avec ton adresse Outlook.
+   > Si Microsoft te dit que ton compte n'a pas d'« annuaire » (directory), crée d'abord un compte Azure gratuit sur https://azure.microsoft.com/free avec la même adresse, puis reviens. Microsoft peut demander une carte bancaire pour vérifier ton identité. Créer une application ne coûte rien.
+2. Menu **Applications** → **Inscriptions d'applications** (*App registrations*) → **Nouvelle inscription**.
+   - Nom : `Mail Cleaner`
+   - Types de comptes : **« Comptes Microsoft personnels uniquement »**, ou **« Comptes dans un annuaire organisationnel et comptes Microsoft personnels »**
+   - URI de redirection : laisser vide → **Inscrire**
+3. Dans l'application : **Authentification** → *Paramètres avancés* → **« Autoriser les flux de clients publics » = Oui** → Enregistrer.
+4. **Autorisations d'API** → Ajouter une autorisation → **Microsoft Graph** → *Autorisations déléguées* → coche **`IMAP.AccessAsUser.All`** et **`offline_access`** → Ajouter.
+5. Sur la page **Vue d'ensemble**, copie l'**ID d'application (client)**. Il ressemble à `1a2b3c4d-....`. Ce n'est pas un secret.
+
+### C. Lancer
+
+```bash
+python -m mail_cleaner --email toi@outlook.com --ms-client-id TON-ID-APPLICATION
+```
+
+L'outil affiche un **code** et une adresse (`https://microsoft.com/devicelogin`). Ouvre-la, saisis le code, connecte-toi et accepte. C'est tout.
+La connexion est ensuite mémorisée dans le dossier `~/.mail-cleaner/`, lisible par toi seul : les lancements suivants (y compris automatiques) ne demandent plus rien.
+
+- Te déconnecter : `python -m mail_cleaner --email toi@outlook.com --logout`
+- Retirer définitivement l'accès : https://account.live.com/consent/Manage
+- Pour ne pas retaper l'ID : définis la variable d'environnement `MS_CLIENT_ID`.
+
+**Partager avec d'autres utilisateurs Outlook** : donne-leur simplement ton ID d'application. Il peut servir à tout le monde, car chacun se connecte avec son propre compte. Microsoft leur affichera « éditeur non vérifié », c'est normal pour une application personnelle.
 
 ## Utilisation
 
@@ -77,7 +111,7 @@ L'outil demande ton adresse et ton mot de passe d'application. Le serveur IMAP e
 
 ## Lancer le nettoyage automatiquement chaque jour
 
-Garde les identifiants dans des variables d'environnement (`MAIL_ADDRESS`, `MAIL_PASSWORD`).
+Garde les identifiants dans des variables d'environnement (`MAIL_ADDRESS`, `MAIL_PASSWORD`, ou `MS_CLIENT_ID` pour Outlook). Pour Outlook, lance d'abord l'outil une fois à la main pour te connecter.
 
 **Mac / Linux** (`crontab -e`), tous les jours à 8 h :
 
@@ -85,11 +119,13 @@ Garde les identifiants dans des variables d'environnement (`MAIL_ADDRESS`, `MAIL
 0 8 * * * cd /chemin/vers/mail-cleaner && MAIL_ADDRESS=toi@gmail.com MAIL_PASSWORD=xxxx python3 -m mail_cleaner --apply --yes --days 7
 ```
 
+Pour Outlook : `MAIL_ADDRESS=toi@outlook.com MS_CLIENT_ID=ton-id python3 -m mail_cleaner --apply --yes --days 7`
+
 **Windows** : Planificateur de tâches → Créer une tâche de base → programme `python`, arguments `-m mail_cleaner --apply --yes --days 7`, dossier de départ `mail-cleaner`.
 
 ## Partager l'outil
 
-Chaque personne utilise **son propre** mot de passe d'application : il suffit de lui envoyer le dossier `mail-cleaner` (ou le lien du dépôt). Aucun serveur, aucun compte à créer, aucune donnée ne passe par un tiers.
+Chaque personne utilise **son propre** mot de passe d'application (ou sa propre connexion Microsoft) : il suffit de lui envoyer le dossier `mail-cleaner` (ou le lien du dépôt). Aucun serveur, aucun compte à créer, aucune donnée ne passe par un tiers.
 
 ## Tests
 

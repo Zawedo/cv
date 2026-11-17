@@ -17,6 +17,7 @@ from pathlib import Path
 
 from .detector import DEFAULT_THRESHOLD, analyze, belongs_to, domain_of
 from .imap_client import Mailbox, guess_server
+from .oauth_ms import AuthError, forget, get_access_token, is_outlook
 
 
 def load_list(path: Path) -> set[str]:
@@ -71,6 +72,12 @@ def parse_args(argv=None):
     p.add_argument("--blacklist", type=Path, default=Path("blacklist.txt"),
                    help="fichier d'expéditeurs/domaines à toujours supprimer")
     p.add_argument("--report", type=Path, help="enregistre le rapport en CSV")
+    p.add_argument("--ms-client-id", default=os.environ.get("MS_CLIENT_ID"),
+                   help="Outlook.com : identifiant de l'application Microsoft (voir README)")
+    p.add_argument("--ms-tenant", default=os.environ.get("MS_TENANT", "consumers"),
+                   help="Outlook : « consumers » (compte perso, défaut) ou « common »")
+    p.add_argument("--logout", action="store_true",
+                   help="Outlook : oublie la connexion Microsoft enregistrée et quitte")
     p.add_argument("--verbose", "-v", action="store_true", help="affiche le détail des scores")
     return p.parse_args(argv)
 
@@ -83,15 +90,36 @@ def main(argv=None) -> int:
     server = args.server or guess_server(address)
     if not server:
         server = input("Serveur IMAP (ex. imap.monfournisseur.fr) : ").strip()
-    password = os.environ.get("MAIL_PASSWORD") or getpass.getpass(
-        "Mot de passe d'application (rien ne s'affiche, c'est normal) : ")
+    outlook = is_outlook(address) or (args.ms_client_id and "office365" in server)
+
+    if args.logout:
+        print("Connexion Microsoft oubliée." if forget(address) else "Aucune connexion enregistrée.")
+        return 0
+
+    password = token = None
+    if outlook:
+        client_id = args.ms_client_id or input(
+            "Identifiant de l'application Microsoft (Client ID, voir README) : ").strip()
+        try:
+            token = get_access_token(address, client_id, args.ms_tenant,
+                                     interactive=not args.yes or sys.stdin.isatty())
+        except (AuthError, OSError) as e:
+            print(f"\n❌ Connexion Microsoft impossible : {e}")
+            return 2
+    else:
+        password = os.environ.get("MAIL_PASSWORD") or getpass.getpass(
+            "Mot de passe d'application (rien ne s'affiche, c'est normal) : ")
 
     try:
-        box = Mailbox(server, address, password, args.port)
+        box = Mailbox(server, address, password, args.port, oauth_token=token)
     except imaplib.IMAP4.error as e:
         print(f"\n❌ Connexion refusée : {e}")
-        print("   Pour Gmail, il faut un « mot de passe d'application » (voir README), "
-              "pas ton mot de passe habituel.")
+        if outlook:
+            print("   Vérifie que l'application Microsoft a bien la permission "
+                  "IMAP.AccessAsUser.All et que l'IMAP est activé dans Outlook.com (voir README).")
+        else:
+            print("   Pour Gmail, il faut un « mot de passe d'application » (voir README), "
+                  "pas ton mot de passe habituel.")
         return 2
     except OSError as e:
         print(f"\n❌ Impossible de joindre {server}:{args.port} — {e}")
@@ -200,7 +228,7 @@ def main(argv=None) -> int:
             box.select(folder, readonly=False)
             moved += box.move_to_trash(uids, trash)
     print(f"\n🗑️  {moved} mail(s) envoyé(s) à la corbeille. "
-          "Ils restent récupérables (30 jours sur Gmail).")
+          "Ils restent récupérables depuis la corbeille.")
     box.close()
     return 0
 

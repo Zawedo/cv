@@ -29,6 +29,9 @@ class FakeIMAP:
         self.moved = []
 
     def login(self, *a): return "OK", [b""]
+    def authenticate(self, mech, cb):
+        self.auth = (mech, cb(b""))
+        return "OK", [b""]
     def logout(self): pass
     def list(self):
         return "OK", [b'(\\HasNoChildren) "/" "INBOX"',
@@ -75,6 +78,25 @@ class FlowTest(unittest.TestCase):
         self.assertEqual(code, 0)
         # spam vidé sauf le contact ami@free.fr, casino supprimé, Julie gardée
         self.assertEqual(fake.moved, [("[Gmail]/Spam", [b"7"]), ("INBOX", [b"2"])])
+
+    def test_outlook_oauth(self):
+        fake = FakeIMAP()
+        fake.boxes["Junk"] = fake.boxes.pop("[Gmail]/Spam")
+        fake.boxes["Deleted"] = fake.boxes.pop("[Gmail]/Trash")
+        fake.boxes["Sent"] = fake.boxes.pop("[Gmail]/Sent Mail")
+        fake.list = lambda: ("OK", [b'(\\HasNoChildren) "/" INBOX',
+                                    b'(\\HasNoChildren \\Junk) "/" Junk',
+                                    b'(\\HasNoChildren \\Sent) "/" Sent',
+                                    b'(\\HasNoChildren \\Trash) "/" Deleted'])
+        with mock.patch("imaplib.IMAP4_SSL", return_value=fake) as ssl, \
+             mock.patch("mail_cleaner.cli.get_access_token", return_value="TOK"), \
+             mock.patch("builtins.print"):
+            code = cli.main(["--email", "moi@outlook.com", "--ms-client-id", "abc",
+                             "--whitelist", "/nonexistent", "--apply", "--yes"])
+        self.assertEqual(code, 0)
+        ssl.assert_called_with("outlook.office365.com", 993)
+        self.assertEqual(fake.auth, ("XOAUTH2", b"user=moi@outlook.com\x01auth=Bearer TOK\x01\x01"))
+        self.assertEqual(fake.moved, [("Junk", [b"7"]), ("INBOX", [b"2"])])
 
 
 if __name__ == "__main__":
