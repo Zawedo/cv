@@ -1,0 +1,9 @@
+# Expéditeurs à ne JAMAIS supprimer (une entrée par ligne).
+# Copie ce fichier en "whitelist.txt" puis adapte-le.
+# - une adresse complète :   maman@gmail.com
+# - un domaine entier :      mabanque.fr   (inclut aussi news.mabanque.fr)
+#
+# Les personnes à qui tu as déjà écrit sont protégées automatiquement.
+
+impots.gouv.fr
+ameli.fr

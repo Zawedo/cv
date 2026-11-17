@@ -1,0 +1,4 @@
+# Expéditeurs à TOUJOURS supprimer (une entrée par ligne).
+# Copie ce fichier en "blacklist.txt" puis adapte-le.
+# promo@site-pénible.com
+# casino-bonus.xyz

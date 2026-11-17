@@ -1,0 +1,5 @@
+whitelist.txt
+blacklist.txt
+*.csv
+.env
+__pycache__/
