@@ -52,3 +52,23 @@ export function scorePrediction(
 export function maxPoints(bestOf: number): number {
   return POINTS_WINNER + exactBonus(bestOf);
 }
+
+// ---------- Bonus « contre la majorité »
+// Le bon vainqueur choisi par peu de joueurs voit ses points multipliés.
+export const UNDERDOG_MIN_PICKS = 5;
+export const UNDERDOG_TIERS = [
+  { maxShare: 0.2, multiplier: 2 },
+  { maxShare: 0.35, multiplier: 1.5 },
+] as const;
+
+/** sameWinner : nombre de pronos (le sien compris) désignant le même vainqueur ; total : nombre de pronos sur le match. */
+export function underdogMultiplier(sameWinner: number, total: number): number {
+  if (total < UNDERDOG_MIN_PICKS || sameWinner <= 0) return 1;
+  const share = sameWinner / total;
+  for (const t of UNDERDOG_TIERS) if (share <= t.maxShare) return t.multiplier;
+  return 1;
+}
+
+export function applyMultiplier(points: number, multiplier: number): number {
+  return Math.round(points * multiplier);
+}

@@ -56,7 +56,7 @@ export default async function MatchsPage({ searchParams }: { searchParams: Promi
 
       {!results && (
         <p className="mb-4 text-[13px] text-wina-muted sm:mb-6 sm:text-sm">
-          Bon vainqueur : <b className="text-white">{POINTS_WINNER} pts</b> · Score exact en BO3 : <b className="text-white">+{BONUS_EXACT_BO3}</b> · en BO5 : <b className="text-white">+{BONUS_EXACT_BO5}</b> · Les pronos ferment au coup d&apos;envoi.
+          Bon vainqueur : <b className="text-white">{POINTS_WINNER} pts</b> · Score exact en BO3 : <b className="text-white">+{BONUS_EXACT_BO3}</b> · en BO5 : <b className="text-white">+{BONUS_EXACT_BO5}</b> · Contre la majorité : <b className="text-white">×1,5</b> si 35 % ou moins ont fait ton choix, <b className="text-white">×2</b> sous 20 % (dès 5 pronos) · Les pronos ferment au coup d&apos;envoi.
         </p>
       )}
 

@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { savePrediction } from "@/app/actions";
 import { TeamLogo } from "./TeamLogo";
 import { displayTeam } from "@/lib/bracket";
-import { maxPoints, scoreOptions, winnerOf } from "@/lib/scoring";
+import { maxPoints, scoreOptions, underdogMultiplier, winnerOf } from "@/lib/scoring";
 
 export type MatchCardData = {
   id: string;
@@ -23,8 +23,9 @@ export type MatchCardData = {
   locked: boolean;
   team1Score: number | null;
   team2Score: number | null;
-  pick: { team1Score: number; team2Score: number; points: number | null; exact: boolean | null } | null;
-  community: { total: number; team1Pct: number } | null;
+  pick: { team1Score: number; team2Score: number; points: number | null; exact: boolean | null; multiplier: number | null } | null;
+  /** total et team1 incluent le prono enregistré de l'utilisateur */
+  community: { total: number; team1: number; team1Pct: number } | null;
 };
 
 export function MatchCard({ m }: { m: MatchCardData }) {
@@ -37,7 +38,7 @@ export function MatchCard({ m }: { m: MatchCardData }) {
   function choose(t1: number, t2: number) {
     if (m.locked) return;
     const prev = pick;
-    setPick({ team1Score: t1, team2Score: t2, points: null, exact: null });
+    setPick({ team1Score: t1, team2Score: t2, points: null, exact: null, multiplier: null });
     setError(null);
     start(async () => {
       const r = await savePrediction(m.id, t1, t2);
@@ -46,6 +47,17 @@ export function MatchCard({ m }: { m: MatchCardData }) {
   }
 
   const pickedWinner = pick ? winnerOf(pick) : null;
+  // Bonus potentiel : part des joueurs ayant choisi le même vainqueur (avec le choix affiché, même s'il vient de changer)
+  let liveMult = 1, liveShare = 0;
+  if (pick && m.community && !finished) {
+    const saved = m.pick ? winnerOf(m.pick) : null;
+    let t1 = m.community.team1, total = m.community.total;
+    if (saved === null) { total += 1; if (pickedWinner === 1) t1 += 1; }
+    else if (saved !== pickedWinner) t1 += pickedWinner === 1 ? 1 : -1;
+    const same = pickedWinner === 1 ? t1 : total - t1;
+    liveMult = underdogMultiplier(same, total);
+    liveShare = Math.round((same / total) * 100);
+  }
   const realWinner = finished && m.team1Score != null ? (m.team1Score > m.team2Score! ? 1 : 2) : null;
 
   return (
@@ -93,7 +105,7 @@ export function MatchCard({ m }: { m: MatchCardData }) {
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-wina-muted">
             {finished && pick && pick.points != null ? (
               <span className={`skew-tag ${pick.points > 0 ? (pick.exact ? "bg-wina-gold text-black" : "bg-green-600 text-white") : "bg-wina-line text-white"}`}>
-                {pick.points > 0 ? `+${pick.points} pts${pick.exact ? " · score exact" : ""}` : "0 pt"}
+                {pick.points > 0 ? `+${pick.points} pts${pick.exact ? " · score exact" : ""}${pick.multiplier && pick.multiplier > 1 ? ` · outsider ×${String(pick.multiplier).replace(".", ",")}` : ""}` : "0 pt"}
               </span>
             ) : !m.locked ? (
               <span>{pick ? (pending ? "Enregistrement…" : "Prono enregistré ✓ – modifiable jusqu'au début") : `Jusqu'à ${maxPoints(m.bestOf)} pts en jeu`}</span>
@@ -112,6 +124,11 @@ export function MatchCard({ m }: { m: MatchCardData }) {
               </span>
             )}
           </div>
+          {liveMult > 1 && (
+            <p className="mt-2 text-xs font-semibold text-wina-gold">
+              {m.locked ? "Seuls" : "Pour l'instant, seuls"} {liveShare} % ont choisi {displayTeam(pickedWinner === 1 ? m.team1 : m.team2)} : points ×{String(liveMult).replace(".", ",")} si tu as raison
+            </p>
+          )}
           {error && <p className="mt-2 text-xs text-wina-red">{error}</p>}
         </div>
       )}

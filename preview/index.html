@@ -74,7 +74,7 @@ main.wrap{padding-top:32px;padding-bottom:48px}
 .tbl{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:14px}
 th{background:var(--ink);color:var(--muted);text-align:left;padding:12px 16px;font-size:16px}
 td{border-top:1px solid var(--line);padding:12px 16px}.num{text-align:right}tr.me{background:rgba(227,6,19,.15)}
-.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:32px}@media(min-width:640px){.stats{grid-template-columns:repeat(5,1fr)}}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:32px}@media(min-width:640px){.stats{grid-template-columns:repeat(6,1fr)}}
 .stat{padding:16px;min-width:0}.stat small{display:block;font-size:11px;text-transform:uppercase;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.stat div{font-size:30px}
 .hist>div{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:12px 16px;font-size:14px;border-top:1px solid var(--line)}.hist>div:first-child{border-top:0}
 /* login */
@@ -130,11 +130,25 @@ footer{border-top:1px solid var(--line);padding:24px 16px;text-align:center;font
   .podium{grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px}
   .pod{padding:12px 10px}.pod .n{font-size:64px;top:-8px;right:4px}.pod .nm{font-size:17px;margin-top:6px}.pod .muted{font-size:12px}.pod .muted span{display:none}
   th,td{padding:10px 8px}th{font-size:14px}.hide-sm{display:none}
-  .stats{grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:24px}.stat{grid-column:span 2;padding:12px}.stat:nth-child(-n+2){grid-column:span 3}.stat div{font-size:24px}.stat small{font-size:10px}
+  .stats{grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:24px}.stat{grid-column:span 2;padding:12px}.stat div{font-size:24px}.stat small{font-size:10px}
   .hero{padding:28px 20px;gap:28px}.side{padding:28px 20px}
   .mypos{display:flex!important;justify-content:space-between;align-items:center;text-align:left!important;padding:10px 14px!important}.mypos .d{font-size:24px!important}
   footer{display:none}
 }
+/* bonus outsider */
+.hint{padding:0 16px 14px;margin-top:-6px;font-size:12px;font-weight:600;color:var(--gold)}
+/* rappels Slack */
+.slackbox{padding:16px;margin-bottom:32px;display:grid;gap:14px}
+.slackbox .top{display:flex;align-items:center;gap:16px}.slackbox .top>div{flex:1;min-width:0}
+.slackbox .top p{font-size:14px;color:var(--muted);margin-top:2px}
+.sw{position:relative;width:56px;height:32px;background:var(--line);flex-shrink:0}.sw.on{background:var(--red)}
+.sw i{position:absolute;top:4px;left:4px;width:24px;height:24px;background:#fff;transition:left .15s}.sw.on i{left:28px}
+.slackmsg{display:flex;gap:10px;background:#1a1d21;border:1px solid #34373c;border-radius:6px;padding:12px 14px;font-size:14px;color:#d1d2d3;line-height:1.45}
+.slackmsg .av{width:36px;height:36px;border-radius:4px;background:var(--red);display:flex;align-items:center;justify-content:center;font:900 italic 18px Arial;color:#fff;flex-shrink:0}
+.slackmsg b{color:#fff}.slackmsg .app{font-size:10px;background:#34373c;color:#ababad;padding:1px 4px;border-radius:2px;margin-left:4px;vertical-align:1px}
+.slackmsg .when{font-size:12px;color:#ababad;margin-left:6px}.slackmsg .lines{margin:4px 0 8px}
+.slackmsg .sbtn{display:inline-block;border:1px solid #e01e5a;color:#fff;background:#e01e5a;border-radius:4px;padding:3px 12px;font-weight:700;font-size:13px}
+.slackbox small{font-size:12px;color:var(--muted)}
 /* logos */
 .badge.lgimg{background:none;object-fit:contain}
 .node button.sel .badge.lgimg,.node button.win .badge.lgimg{background:rgba(0,0,0,.45);padding:2px}
@@ -188,6 +202,12 @@ const HOURS={LCK:9,LPL:11,LEC:18,LCS:23};
 // ---- barème (identique à src/lib/scoring.ts)
 const opts=bo=>{const w=Math.ceil(bo/2),a=[],b=[];for(let l=0;l<w;l++){a.push([w,l]);b.push([l,w])}return a.concat(b.reverse())};
 const bonus=bo=>bo>=5?10:bo>=3?5:0;
+const umult=(same,tot)=>tot<5||same<=0?1:same/tot<=.2?2:same/tot<=.35?1.5:1;
+const fmtM=x=>String(x).replace(".",",");
+// tous les pronos d'un match (joueurs de démo + le tien)
+const allPicks=m=>[...OTHERS[m.id].filter(Boolean),...(picks[m.id]?[picks[m.id]]:[])];
+function scoreFull(m,p){const x=scoreP(m.bo,p,m.res);if(!x.pts)return{...x,mult:1};
+  const all=allPicks(m),w=p[0]>p[1],mult=umult(all.filter(q=>(q[0]>q[1])===w).length,all.length);return{pts:Math.round(x.pts*mult),ex:x.ex,mult}}
 const scoreP=(bo,p,r)=>{const gw=(p[0]>p[1])===(r[0]>r[1]),ex=p[0]===r[0]&&p[1]===r[1];return gw?{pts:10+(ex?bonus(bo):0),ex}:{pts:0,ex:false}};
 // ---- données de démo déterministes, calées sur la date du jour
 let s=7;const rnd=()=>(s=s*16807%2147483647)/2147483647,pick=a=>a[Math.floor(rnd()*a.length)];
@@ -198,9 +218,11 @@ for(const L of LEAGUES.filter(l=>TEAMS[l.code])){const T=TEAMS[L.code];for(let d
   const sh=[...T].sort(()=>rnd()-.5),bo=d===7||d===6?5:L.code==="LEC"&&d<0?1:3;
   const start=new Date(today.getTime()+d*864e5+(HOURS[L.code]+k*3)*36e5);
   const st=start.getTime()+3*36e5<now?"FINISHED":start.getTime()<now?"LIVE":"UPCOMING";
-  const res=st==="FINISHED"?pick(opts(bo)):null;
+  // chaque match a un favori : ~75 % des joueurs le choisissent, il gagne 2 fois sur 3
+  const fav=rnd()<.5?1:2,side=w=>pick(opts(bo).filter(o=>(o[0]>o[1]?1:2)===w));
+  const res=st==="FINISHED"?side(rnd()<.66?fav:3-fav):null;
   const m={id:"m"+id++,league:L.code,color:L.color,stage:"Split 1 · Semaine "+(5+Math.floor((d+7)/7)),t1:sh[0],t2:sh[1],bo,start,st,res};
-  OTHERS[m.id]=PLAYERS.map(()=>rnd()<(st==="UPCOMING"?.45:.8)?pick(opts(bo)):null);
+  OTHERS[m.id]=PLAYERS.map(()=>rnd()<(st==="UPCOMING"?.45:.8)?side(rnd()<.75?fav:3-fav):null);
   MATCHES.push(m)}}}
 const BLG="Bilibili Gaming",TES="Top Esports",HLE="Hanwha Life Esports";
 MATCHES.sort((a,b)=>a.start-b.start);
@@ -258,7 +280,7 @@ function board(lg){
   const rows=PLAYERS.map((n,i)=>({name:n,i,pts:0,ok:0,ex:0,pl:0}));
   if(me)rows.push({name:me,i:-1,pts:0,ok:0,ex:0,pl:0,me:true});
   for(const m of MATCHES){if(m.st!=="FINISHED"||(lg&&m.league!==lg))continue;
-    rows.forEach(r=>{const p=r.me?picks[m.id]:OTHERS[m.id][r.i];if(!p)return;const x=scoreP(m.bo,p,m.res);r.pl++;r.pts+=x.pts;if(x.pts)r.ok++;if(x.ex)r.ex++})}
+    rows.forEach(r=>{const p=r.me?picks[m.id]:OTHERS[m.id][r.i];if(!p)return;const x=scoreFull(m,p);r.pl++;r.pts+=x.pts;if(x.pts)r.ok++;if(x.ex)r.ex++;if(x.pts&&x.mult>1)r.ud=(r.ud||0)+1})}
   for(const b of BRACKETS){if(!Object.keys(b.results).length||(lg&&lg!==b.event))continue;
     rows.forEach(r=>{const p=r.me?bpicks[b.slug]:BOTHERS[b.slug][r.i];if(!p)return;r.pts+=scoreB(b,p).pts})}
   rows.sort((a,b)=>b.pts-a.pts||b.ex-a.ex||b.ok-a.ok||a.name.localeCompare(b.name));
@@ -285,13 +307,14 @@ function card(m){
     return`<button class="d ${sel?"sel":""}" ${lk?"disabled":""} onclick="choose('${m.id}',${a},${b})" aria-pressed="${!!sel}">${esc(lab)}</button>`}).join("");
   const oth=OTHERS[m.id].filter(Boolean),all=p?[...oth,p]:oth,tot=all.length,t1=all.filter(x=>x[0]>x[1]).length,pct=tot?Math.round(t1/tot*100):50;
   let status;
-  if(fin&&p){const x=scoreP(m.bo,p,m.res);status=`<span class="tag" style="background:${x.pts?(x.ex?"var(--gold);color:#000":"var(--green)"):"var(--line)"}">${x.pts?`+${x.pts} pts${x.ex?" · score exact":""}`:"0 pt"}</span>`}
+  if(fin&&p){const x=scoreFull(m,p);status=`<span class="tag" style="background:${x.pts?(x.ex?"var(--gold);color:#000":"var(--green)"):"var(--line)"}">${x.pts?`+${x.pts} pts${x.ex?" · score exact":""}${x.mult>1?` · outsider ×${fmtM(x.mult)}`:""}`:"0 pt"}</span>`}
   else if(!lk)status=p?"Prono enregistré ✓ – modifiable jusqu'au début":`Jusqu'à ${10+bonus(m.bo)} pts en jeu`;
   else status=p?"Pronos fermés":"Pas de prono";
   const comm=(p||lk)&&tot?`<span class="comm"><span>${tot} pronos</span><span class="bar"><i style="width:${pct}%"></i></span><span>${pct}% / ${100-pct}%</span></span>`:"";
   return`<article class="card m ${p&&!fin?"picked":""}"><div class="m-head"><span class="tag" style="background:${m.color};color:#fff">${LG[m.league].name}</span><span>${m.stage}</span><span class="t">${timeL(m.start)}</span><span>BO${m.bo}</span>${m.st==="LIVE"?`<span class="tag live" style="background:var(--red);color:#fff">Live</span>`:""}</div>
   <div class="m-body">${team(m.t1,1)}<div class="d score">${fin?`${m.res[0]}<span class="muted"> - </span>${m.res[1]}`:`<span class="muted" style="font-size:20px">VS</span>`}</div>${team(m.t2,2,1)}</div>
-  <div class="opts" style="grid-template-columns:repeat(${opts(m.bo).length},1fr)">${o}</div><div class="m-foot"><span>${status}</span>${comm}</div></article>`}
+  <div class="opts" style="grid-template-columns:repeat(${opts(m.bo).length},1fr)">${o}</div><div class="m-foot"><span>${status}</span>${comm}</div>${(()=>{if(!p||fin)return"";const w=p[0]>p[1],same=all.filter(q=>(q[0]>q[1])===w).length,mu=umult(same,tot);
+    return mu>1?`<p class="hint">${lk?"Seuls":"Pour l'instant, seuls"} ${Math.round(same/tot*100)} % ont choisi ${esc(dname(w?m.t1:m.t2))} : points ×${fmtM(mu)} si tu as raison</p>`:""})()}</article>`}
 function pageMatchs(){
   const res=view.vue==="res";
   let list=MATCHES.filter(m=>(!view.lg||m.league===view.lg)&&(res?m.st==="FINISHED":m.st!=="FINISHED"));
@@ -300,7 +323,7 @@ function pageMatchs(){
   list.forEach(m=>{const k=m.start.toLocaleDateString("fr-CA",TZ);let d=days.find(x=>x.k===k);if(!d)days.push(d={k,l:dayL(m.start),it:[]});d.it.push(m)});
   return shell(ptitle(res?"Résultats":"À pronostiquer",res?"Matchs terminés":"Prochains matchs",`<div class="seg"><button class="btn ${!res?"btn-red":"btn-ghost"}" onclick="setVue('avenir')">À venir</button><button class="btn ${res?"btn-red":"btn-ghost"}" onclick="setVue('res')">Résultats</button></div>`)+
   `<div class="row">${tabs(view.lg)}${!res&&todo?`<span class="tag" style="background:var(--gold);color:#000">${todo} match${todo>1?"s":""} sans prono</span>`:""}</div>`+
-  (res?"":`<p class="rules muted">Bon vainqueur : <b>10 pts</b> · Score exact en BO3 : <b>+5</b> · en BO5 : <b>+10</b> · Les pronos ferment au coup d'envoi.</p>`)+
+  (res?"":`<p class="rules muted">Bon vainqueur : <b>10 pts</b> · Score exact en BO3 : <b>+5</b> · en BO5 : <b>+10</b> · Contre la majorité : <b>×1,5</b> si 35 % ou moins ont fait ton choix, <b>×2</b> sous 20 % (dès 5 pronos) · Les pronos ferment au coup d'envoi.</p>`)+
   (days.length?"":`<div class="card" style="padding:40px;text-align:center" ><p class="muted">${view.lg&&LG[view.lg].intl?`Pas de match ${LG[view.lg].name} pour l'instant : ils apparaîtront ici pendant le tournoi.`:"Aucun match pour le moment."}</p>${view.lg&&LG[view.lg].intl?`<button class="btn btn-ghost" style="margin-top:16px" onclick="go('tableaux')">Voir les tableaux</button>`:""}</div>`)+
   days.map(d=>`<section class="day"><h2 class="d">${d.l}</h2><div class="grid">${d.it.map(card).join("")}</div></section>`).join(""))}
 function pageClassement(){
@@ -312,14 +335,24 @@ function pageClassement(){
   rows.map(r=>`<tr class="${r.me?"me":""}"><td class="d" style="font-size:18px">${r.rank}</td><td class="pn"><b>${esc(r.name)}</b>${r.me?` <span style="color:var(--red);font-size:12px">toi</span>`:""}</td><td class="num d" style="font-size:20px">${r.pts}</td><td class="num hide-sm">${r.ok}/${r.pl}</td><td class="num">${r.ex}</td><td class="num muted hide-xs">${r.pl?Math.round(r.ok/r.pl*100):0}%</td></tr>`).join("")+`</tbody></table></div>`)}
 function pageProfil(){
   const r=board("").find(x=>x.me),mine=MATCHES.filter(m=>picks[m.id]).slice().reverse(),pend=mine.filter(m=>m.st!=="FINISHED").length;
-  const st=[["Rang","#"+r.rank],["Points",r.pts],["Bons vainqueurs",`${r.ok}/${r.pl}`],["Scores exacts",r.ex],["En attente",pend]];
+  const st=[["Rang","#"+r.rank],["Points",r.pts],["Bons vainqueurs",`${r.ok}/${r.pl}`],["Scores exacts",r.ex],["Outsiders",r.ud||0],["En attente",pend]];
   return shell(ptitle("Mon profil",esc(me))+`<div class="stats">${st.map(([l,v])=>`<div class="card stat"><small>${l}</small><div class="d">${v}</div></div>`).join("")}</div>`+
+  slackBox()+
   (()=>{const mineB=BRACKETS.filter(b=>bpicks[b.slug]&&Object.keys(bpicks[b.slug]).length);if(!mineB.length)return"";
     return`<h2 class="d" style="font-size:26px;margin-bottom:12px">Tableaux</h2><div class="card" style="margin-bottom:32px">`+mineB.map(b=>{const x=scoreB(b,bpicks[b.slug]),fin=Object.keys(b.results).length;
       return`<button class="h" style="width:100%;grid-template-columns:auto 1fr auto;grid-template-areas:'tag teams pts'" onclick="openB('${b.slug}')"><span class="a"><span class="tag" style="background:${LG[b.event].color}">${LG[b.event].name}</span></span><span class="c">${b.name}</span><span class="f">${fin?`<b class="d" style="font-size:20px">+${x.pts}</b> <span class="muted">/ ${maxB(b.format)}</span>`:`<span class="muted">en attente</span>`}</span></button>`}).join("")+`</div>`})()+
   `<h2 class="d" style="font-size:26px;margin-bottom:12px">Historique</h2><div class="card">`+
-  (mine.length?mine.map(m=>{const p=picks[m.id],x=m.st==="FINISHED"?scoreP(m.bo,p,m.res):null;
-    return`<div class="h"><span class="a"><span class="tag" style="background:${m.color}">${LG[m.league].name}</span></span><span class="b muted">${dayL(m.start)} · ${timeL(m.start)}</span><span class="c">${esc(dname(m.t1))} <span class="muted">vs</span> ${esc(dname(m.t2))}${x?` <span class="muted" style="font-weight:400">(${m.res[0]}-${m.res[1]})</span>`:""}</span><span class="e muted">Prono : <b style="color:#fff">${esc(dname(p[0]>p[1]?m.t1:m.t2))}</b>${m.bo>1?` (${p[0]}-${p[1]})`:""}</span><span class="f">${x?`<b class="d" style="font-size:20px;color:${x.pts?(x.ex?"var(--gold)":"var(--green)"):"var(--muted)"}">+${x.pts}</b>`:`<span class="muted">en attente</span>`}</span></div>`}).join(""):`<div class="muted" style="text-align:center;padding:40px">Aucun prono pour l'instant.</div>`)+`</div>`)}
+  (mine.length?mine.map(m=>{const p=picks[m.id],x=m.st==="FINISHED"?scoreFull(m,p):null;
+    return`<div class="h"><span class="a"><span class="tag" style="background:${m.color}">${LG[m.league].name}</span></span><span class="b muted">${dayL(m.start)} · ${timeL(m.start)}</span><span class="c">${esc(dname(m.t1))} <span class="muted">vs</span> ${esc(dname(m.t2))}${x?` <span class="muted" style="font-weight:400">(${m.res[0]}-${m.res[1]})</span>`:""}</span><span class="e muted">Prono : <b style="color:#fff">${esc(dname(p[0]>p[1]?m.t1:m.t2))}</b>${m.bo>1?` (${p[0]}-${p[1]})`:""}</span><span class="f">${x?`<b class="d" style="font-size:20px;color:${x.pts?(x.ex?"var(--gold)":"var(--green)"):"var(--muted)"}">+${x.pts}${x.pts&&x.mult>1?`<span style="font-size:12px;color:var(--gold);margin-left:4px">×${fmtM(x.mult)}</span>`:""}</b>`:`<span class="muted">en attente</span>`}</span></div>`}).join(""):`<div class="muted" style="text-align:center;padding:40px">Aucun prono pour l'instant.</div>`)+`</div>`)}
+function slackBox(){const on=store.get("slack",true);
+  const next=MATCHES.find(m=>m.st==="UPCOMING"&&!picks[m.id]);
+  const ex=next?`<b>⏰ ${esc(dname(next.t1))} vs ${esc(dname(next.t2))} commence à ${timeL(next.start)} et tu n'as pas pronostiqué.</b><div class="lines">• <b>${esc(dname(next.t1))}</b> vs <b>${esc(dname(next.t2))}</b> · ${LG[next.league].name} · ${timeL(next.start)}</div>`
+    :`<b>🏆 Le tableau MSI Démo ferme à ${timeL(demoLock)} et tu ne l'as pas rempli.</b><div class="lines">Jusqu'à 40 pts pour le bon champion.</div>`;
+  return`<div class="card slackbox"><div class="top"><div><div class="d" style="font-size:22px">Rappels Slack</div><p>Un message privé environ 1 h avant un match que tu n'as pas pronostiqué, et 3 h avant la fermeture d'un tableau incomplet.</p></div>
+    <button class="sw ${on?"on":""}" role="switch" aria-checked="${on}" aria-label="Rappels Slack" onclick="toggleSlack()"><i></i></button></div>
+    ${on?`<small>Aperçu du message que tu recevrais :</small><div class="slackmsg"><span class="av">W</span><div><b>LoL Pronos</b><span class="app">APP</span><span class="when">${timeL(new Date(now))}</span><div>${ex}</div><span class="sbtn">Pronostiquer</span></div></div>
+    <small>Sur la chaîne de la communauté : le programme du jour à 9 h, le classement chaque lundi avec le coup d'outsider de la semaine, et l'ouverture des tableaux MSI / Worlds.</small>`:`<small>Rappels désactivés. Tu continues de voir les annonces sur la chaîne de la communauté.</small>`}</div>`}
+function toggleSlack(){store.set("slack",!store.get("slack",true));render();toast(store.get("slack",true)?"Rappels Slack activés":"Rappels Slack désactivés")}
 function pageTableaux(){
   return shell(ptitle("MSI · Worlds","Tableaux")+`<p class="bnote">Avant le premier match de la phase finale, remplis tout le tableau : choisis le vainqueur de chaque affiche jusqu'au champion. Chaque bon vainqueur rapporte des points, de 10 au premier tour à 40 pour le champion. Les points s'ajoutent au classement général.</p><div class="tcards">`+
   BRACKETS.map(b=>{const F=FORMATS[b.format],open=!bLocked(b),champ=b.results[F.final],mine=bpicks[b.slug]||{},done=Object.keys(resolveB(b.format,b.seeds,mine).picks).length,tot=F.nodes.length,x=scoreB(b,mine);

@@ -14,6 +14,11 @@ Tous les matchs des ligues majeures (**LCK, LPL, LEC, LCS**) et des tournois int
   | Bonus score exact | – | +5 | +10 |
 - **Tableaux MSI / Worlds** (`src/lib/bracket.ts`) : avant le premier match de la phase finale, chacun remplit tout le tableau (élimination directe à 8 pour les Worlds, double élimination à 8 pour le MSI). Changer un vainqueur efface les choix qui en dépendaient. Points par bon vainqueur : 10 aux premiers tours, 20 pour les finales intermédiaires (demies des Worlds, finales gagnants/perdants du MSI), 40 pour le champion (max 120 aux Worlds, 190 au MSI). Inclus dans le classement général et dans les onglets MSI / Worlds.
 - **Logos des équipes** récupérés depuis Leaguepedia pendant la synchro et servis par `/api/logo` (Leaguepedia bloque l'affichage direct depuis un autre site). Monogramme en repli.
+- **Bonus contre la majorité** (`src/lib/scoring.ts`) : si ton vainqueur est le bon et que 35 % ou moins des joueurs l'avaient choisi, tes points du match sont multipliés par 1,5 ; sous 20 %, par 2 (à partir de 5 pronos sur le match, arrondi à l'entier). La répartition est figée au coup d'envoi ; avant, la carte indique le bonus possible « pour l'instant ». Pas de bonus sur les tableaux.
+- **Rappels Slack** (`src/lib/reminders.ts`, `src/lib/reminders-run.ts`) :
+  - en message privé (bot) : environ 1 h avant un match non pronostiqué, 3 h avant la fermeture d'un tableau incomplet. Seulement les joueurs actifs ces 30 derniers jours, désactivable dans le profil. Le compte Slack est retrouvé via l'email Winamax ;
+  - sur une chaîne : programme du jour à 9 h (Paris), classement du lundi avec le coup d'outsider de la semaine, ouverture des tableaux MSI / Worlds ;
+  - chaque rappel est tracé (`ReminderLog`) et n'est jamais envoyé deux fois.
 - **Tendance de la communauté** (% par équipe), visible une fois qu'on a pronostiqué, pour ne pas influencer.
 - **Classement** général et par ligue, avec podium. Départage : points, puis scores exacts, puis bons vainqueurs.
 - **Mes pronos** : historique et statistiques personnelles.
@@ -49,6 +54,7 @@ La synchro récupère J-14 → J+30 et, dans l'ordre :
 Testé sur les vraies données 2026 : 325 matchs, tableaux MSI 2026 (champion Hanwha Life Esports) et Worlds 2026 (champion Bilibili Gaming), 47 logos sur 49.
 
 - Manuel : bouton dans `/admin`, ou `npm run sync`.
+- Rappels : `GET /api/cron/reminders`, même authentification, toutes les 15 min après la synchro.
 - Automatique : `GET /api/cron/sync` avec l'en-tête `Authorization: Bearer $CRON_SECRET` (16 caractères minimum).
   Le workflow `.github/workflows/sync.yml` l'appelle toutes les 15 min dès que les secrets `APP_URL` et `CRON_SECRET` sont définis dans le dépôt.
 
@@ -56,6 +62,12 @@ Un match corrigé à la main dans l'admin n'est plus écrasé par la synchro.
 
 Hébergeurs à autoriser si le serveur a un pare-feu sortant : `lol.fandom.com` (API) et `static.wikia.nocookie.net` (logos).
 Pour brancher une autre source (API officielle, PandaScore…), il suffit d'implémenter l'interface `MatchProvider` (`src/lib/providers/types.ts`).
+
+## Brancher Slack
+
+1. Créer une app Slack dans l'espace Winamax (api.slack.com/apps), ajouter les scopes bot `chat:write`, `users:read`, `users:read.email`, l'installer, et copier le jeton `xoxb-…` dans `SLACK_BOT_TOKEN`.
+2. Pour la chaîne : activer « Incoming Webhooks », créer un webhook vers la chaîne choisie et le mettre dans `SLACK_WEBHOOK_URL` (ou inviter le bot dans la chaîne et renseigner `SLACK_CHANNEL_ID`).
+3. Sans configuration Slack, les rappels ne font rien et l'interrupteur du profil n'apparaît pas.
 
 ## Mise en production
 

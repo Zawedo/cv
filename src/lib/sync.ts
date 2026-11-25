@@ -1,6 +1,6 @@
 import { prisma } from "./db";
 import { config } from "./config";
-import { scorePrediction } from "./scoring";
+import { applyMultiplier, scorePrediction, underdogMultiplier, winnerOf } from "./scoring";
 import { FORMATS, detectFormat, nodeForTab, scoreBracket, type BracketFormat, type Picks } from "./bracket";
 import { leagueName } from "./leagues";
 import { leaguepedia } from "./providers/leaguepedia";
@@ -17,14 +17,17 @@ export async function settleMatch(matchId: string) {
   if (!match) return 0;
   const preds = await prisma.prediction.findMany({ where: { matchId } });
   const finished = match.status === "FINISHED" && match.team1Score != null && match.team2Score != null;
+  // Répartition des vainqueurs choisis, figée au coup d'envoi (les pronos ferment à ce moment-là)
+  const forTeam1 = preds.filter((p) => winnerOf(p) === 1).length;
   await prisma.$transaction(
     preds.map((p) => {
       const r = finished
         ? scorePrediction(match.bestOf, p, { team1Score: match.team1Score!, team2Score: match.team2Score! })
         : null;
+      const mult = r ? underdogMultiplier(winnerOf(p) === 1 ? forTeam1 : preds.length - forTeam1, preds.length) : null;
       return prisma.prediction.update({
         where: { id: p.id },
-        data: { points: r ? r.points : null, exact: r ? r.exact : null },
+        data: { points: r ? applyMultiplier(r.points, mult!) : null, exact: r ? r.exact : null, multiplier: mult },
       });
     }),
   );

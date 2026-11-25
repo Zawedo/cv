@@ -87,6 +87,13 @@ export async function savePrediction(matchId: string, team1Score: number, team2S
   return { ok: true };
 }
 
+export async function setSlackReminders(enabled: boolean): Promise<FormState> {
+  const user = await requireUser();
+  await prisma.user.update({ where: { id: user.id }, data: { slackReminders: enabled } });
+  revalidatePath("/profil");
+  return { ok: true };
+}
+
 // ---------- Admin ----------
 
 export async function adminSync(): Promise<FormState> {

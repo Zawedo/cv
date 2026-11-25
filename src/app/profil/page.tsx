@@ -6,38 +6,45 @@ import { leagueInfo } from "@/lib/leagues";
 import Link from "next/link";
 import { maxBracketPoints, type BracketFormat } from "@/lib/bracket";
 import { Shell, PageTitle } from "@/components/Shell";
+import { SlackToggle } from "./SlackToggle";
+import { slackConfig } from "@/lib/slack";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProfilPage() {
   const user = await requireUser();
-  const [preds, board, bracketPicks] = await Promise.all([
+  const [preds, board, bracketPicks, settings] = await Promise.all([
     prisma.prediction.findMany({ where: { userId: user.id }, include: { match: true }, orderBy: { match: { startTime: "desc" } }, take: 200 }),
     leaderboard(),
     prisma.bracketPick.findMany({ where: { userId: user.id }, include: { bracket: true }, orderBy: { bracket: { lockAt: "desc" } } }),
+    prisma.user.findUniqueOrThrow({ where: { id: user.id }, select: { slackReminders: true } }),
   ]);
   const me = board.find((r) => r.userId === user.id);
   const pending = preds.filter((p) => p.points == null).length;
+  const underdogs = preds.filter((p) => (p.points ?? 0) > 0 && (p.multiplier ?? 1) > 1).length;
 
   const stats = [
     { label: "Rang", value: me ? `#${me.rank}` : "–" },
     { label: "Points", value: me?.points ?? 0 },
     { label: "Bons vainqueurs", value: `${me?.correct ?? 0}/${me?.played ?? 0}` },
     { label: "Scores exacts", value: me?.exact ?? 0 },
+    { label: "Outsiders", value: underdogs },
     { label: "En attente", value: pending },
   ];
 
   return (
     <Shell user={user} active="/profil">
       <PageTitle kicker={user.email} title={user.displayName} />
-      <div className="mb-6 grid grid-cols-6 gap-2 sm:mb-8 sm:grid-cols-5 sm:gap-3">
+      <div className="mb-6 grid grid-cols-6 gap-2 sm:mb-8 sm:grid-cols-6 sm:gap-3">
         {stats.map((s, i) => (
-          <div key={s.label} className={`card min-w-0 p-3 sm:col-span-1 sm:p-4 ${i < 2 ? "col-span-3" : "col-span-2"}`}>
+          <div key={s.label} className={`card min-w-0 p-3 sm:col-span-1 sm:p-4 col-span-2`}>
             <div className="truncate text-[10px] uppercase text-wina-muted sm:text-xs">{s.label}</div>
             <div className="h-display text-2xl sm:text-3xl">{s.value}</div>
           </div>
         ))}
       </div>
+
+      {slackConfig().dm && <SlackToggle initial={settings.slackReminders} />}
 
       {bracketPicks.length > 0 && (
         <>
@@ -68,7 +75,7 @@ export default async function ProfilPage() {
               <span className="text-wina-muted [grid-area:prono]">Prono : <b className="text-white">{pickedName}</b> {m.bestOf > 1 && `(${p.team1Score}-${p.team2Score})`}</span>
               <span className="text-right [grid-area:pts]">
                 {p.points == null ? <span className="text-wina-muted">en attente</span>
-                  : <b className={p.points > 0 ? (p.exact ? "text-wina-gold" : "text-green-400") : "text-wina-muted"}>+{p.points}</b>}
+                  : <b className={p.points > 0 ? (p.exact ? "text-wina-gold" : "text-green-400") : "text-wina-muted"}>+{p.points}{p.points > 0 && (p.multiplier ?? 1) > 1 && <span className="ml-1 text-xs text-wina-gold">×{String(p.multiplier).replace(".", ",")}</span>}</b>}
               </span>
             </div>
           );

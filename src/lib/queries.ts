@@ -35,9 +35,9 @@ export async function toCards(matches: Match[], userId: string): Promise<MatchCa
       logo1: logos.get(m.team1) ?? null, logo2: logos.get(m.team2) ?? null, tournament: m.tournament, stage: m.stage,
       team1: m.team1, team2: m.team2, bestOf: m.bestOf, time: timeLabel(m.startTime), status: m.status, locked,
       team1Score: m.team1Score, team2Score: m.team2Score,
-      pick: p && { team1Score: p.team1Score, team2Score: p.team2Score, points: p.points, exact: p.exact },
+      pick: p && { team1Score: p.team1Score, team2Score: p.team2Score, points: p.points, exact: p.exact, multiplier: p.multiplier },
       // La tendance de la communauté n'est visible qu'après avoir pronostiqué (ou une fois le match verrouillé)
-      community: p || locked ? { total, team1Pct: total ? Math.round((t1 / total) * 100) : 50 } : null,
+      community: p || locked ? { total, team1: t1, team1Pct: total ? Math.round((t1 / total) * 100) : 50 } : null,
     };
   });
 }

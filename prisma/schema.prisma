@@ -11,6 +11,10 @@ model User {
   id          String       @id @default(cuid())
   email       String       @unique
   displayName String?      @unique
+  /// Rappels Slack en message privé (désactivables depuis le profil)
+  slackReminders Boolean   @default(true)
+  /// Identifiant Slack retrouvé via l'email ; "" = introuvable
+  slackId     String?
   createdAt   DateTime     @default(now())
   sessions     Session[]
   predictions  Prediction[]
@@ -71,6 +75,8 @@ model Prediction {
   team2Score Int
   points     Int?
   exact      Boolean?
+  /// Multiplicateur « contre la majorité » appliqué (1, 1.5 ou 2)
+  multiplier Float?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -113,4 +119,10 @@ model BracketPick {
   updatedAt DateTime @updatedAt
 
   @@unique([userId, bracketId])
+}
+
+/// Trace des rappels envoyés, pour ne jamais envoyer deux fois le même
+model ReminderLog {
+  key       String   @id
+  createdAt DateTime @default(now())
 }
