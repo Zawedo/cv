@@ -1,7 +1,7 @@
 # Winamax LoL Pronos
 
 Concours interne de pronostics League of Legends, **réservé aux collaborateurs Winamax**.
-Tous les matchs des ligues majeures (**LCK, LPL, LEC, LCS**), un classement général et par ligue.
+Tous les matchs des ligues majeures (**LCK, LPL, LEC, LCS**) et des tournois internationaux (**MSI, Worlds**), les tableaux des phases finales, un classement général et par compétition.
 
 ## Fonctionnalités
 
@@ -12,6 +12,8 @@ Tous les matchs des ligues majeures (**LCK, LPL, LEC, LCS**), un classement gén
   |---|---|---|---|
   | Bon vainqueur | 10 | 10 | 10 |
   | Bonus score exact | – | +5 | +10 |
+- **Tableaux MSI / Worlds** (`src/lib/bracket.ts`) : avant le premier match de la phase finale, chacun remplit tout le tableau (élimination directe à 8 pour les Worlds, double élimination à 8 pour le MSI). Changer un vainqueur efface les choix qui en dépendaient. Points par bon vainqueur : 10 aux premiers tours, 20 pour les finales intermédiaires (demies des Worlds, finales gagnants/perdants du MSI), 40 pour le champion (max 120 aux Worlds, 190 au MSI). Inclus dans le classement général et dans les onglets MSI / Worlds.
+- **Logos des équipes** récupérés depuis Leaguepedia pendant la synchro et servis par `/api/logo` (Leaguepedia bloque l'affichage direct depuis un autre site). Monogramme en repli.
 - **Tendance de la communauté** (% par équipe), visible une fois qu'on a pronostiqué, pour ne pas influencer.
 - **Classement** général et par ligue, avec podium. Départage : points, puis scores exacts, puis bons vainqueurs.
 - **Mes pronos** : historique et statistiques personnelles.
@@ -39,13 +41,20 @@ Tests : `npm test` (barème, mapping des données).
 ## Données des matchs
 
 Le calendrier et les résultats viennent de l'API publique **Leaguepedia** (`src/lib/providers/leaguepedia.ts`, sans clé).
-La synchro récupère J-14 → J+30, met à jour les matchs puis recalcule les points (idempotent).
+La synchro récupère J-14 → J+30 et, dans l'ordre :
+1. met à jour les matchs (qualifications et promotions exclues, play-in des Worlds inclus) et recalcule les points ;
+2. construit les tableaux MSI / Worlds dès que les 8 équipes du premier tour sont connues (verrouillage au premier match), puis les résultats ;
+3. récupère les logos manquants.
+
+Testé sur les vraies données 2026 : 325 matchs, tableaux MSI 2026 (champion Hanwha Life Esports) et Worlds 2026 (champion Bilibili Gaming), 47 logos sur 49.
 
 - Manuel : bouton dans `/admin`, ou `npm run sync`.
 - Automatique : `GET /api/cron/sync` avec l'en-tête `Authorization: Bearer $CRON_SECRET` (16 caractères minimum).
   Le workflow `.github/workflows/sync.yml` l'appelle toutes les 15 min dès que les secrets `APP_URL` et `CRON_SECRET` sont définis dans le dépôt.
 
 Un match corrigé à la main dans l'admin n'est plus écrasé par la synchro.
+
+Hébergeurs à autoriser si le serveur a un pare-feu sortant : `lol.fandom.com` (API) et `static.wikia.nocookie.net` (logos).
 Pour brancher une autre source (API officielle, PandaScore…), il suffit d'implémenter l'interface `MatchProvider` (`src/lib/providers/types.ts`).
 
 ## Mise en production

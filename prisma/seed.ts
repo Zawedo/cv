@@ -1,6 +1,7 @@
 // Données de démonstration : `npm run db:seed`. Ne pas lancer en production.
 import { PrismaClient } from "@prisma/client";
 import { scorePrediction, scoreOptions } from "../src/lib/scoring";
+import { resolve, FORMATS, scoreBracket, type BracketFormat, type Picks } from "../src/lib/bracket";
 
 const prisma = new PrismaClient();
 
@@ -56,7 +57,37 @@ async function main() {
       }
     }
   }
-  console.log(`Démo : ${users.length} joueurs, ${n} matchs.`);
+  // Tableau de démo ouvert (fictif) pour tester le remplissage
+  const lockAt = new Date(now + 9 * 864e5);
+  await prisma.bracket.upsert({
+    where: { slug: "demo-msi" },
+    create: { slug: "demo-msi", name: "MSI Démo", event: "MSI", format: "DOUBLE_ELIM_8", lockAt, manual: true,
+      seeds: JSON.stringify(["Gen.G", "Team Liquid", "G2 Esports", "Top Esports", "Bilibili Gaming", "Karmine Corp", "Hanwha Life Esports", "FlyQuest"]) },
+    update: { lockAt },
+  });
+
+  // Tableaux remplis au hasard par les joueurs de démo, sur tous les tableaux existants
+  for (const b of await prisma.bracket.findMany()) {
+    const format = b.format as BracketFormat;
+    const seeds = JSON.parse(b.seeds) as string[];
+    for (const u of users) {
+      if (rnd() < 0.2) continue;
+      const picks: Picks = {};
+      for (const def of FORMATS[format].nodes) {
+        const node = resolve(format, seeds, picks).nodes.find((x) => x.id === def.id)!;
+        if (node.teamA && node.teamB) picks[def.id] = rnd() < 0.5 ? node.teamA : node.teamB;
+      }
+      const results = JSON.parse(b.results) as Picks;
+      const started = Object.keys(results).length > 0;
+      const r = scoreBracket(format, seeds, picks, results);
+      await prisma.bracketPick.upsert({
+        where: { userId_bracketId: { userId: u.id, bracketId: b.id } },
+        create: { userId: u.id, bracketId: b.id, picks: JSON.stringify(picks), points: started ? r.points : null, correct: started ? r.correct : null },
+        update: { picks: JSON.stringify(picks), points: started ? r.points : null, correct: started ? r.correct : null },
+      });
+    }
+  }
+  console.log(`Démo : ${users.length} joueurs, ${n} matchs, tableaux remplis.`);
 }
 
 main().finally(() => prisma.$disconnect());

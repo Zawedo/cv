@@ -9,6 +9,8 @@ export const LEAGUES = [
     color: "#0A96FF",
     leaguepedia: ["League of Legends Championship Series", "League of Legends Championship of The Americas North"],
   },
+  { code: "MSI", name: "MSI", region: "International", color: "#7C5CFF", leaguepedia: ["Mid-Season Invitational"], international: true },
+  { code: "WORLDS", name: "Worlds", region: "International", color: "#C89B3C", leaguepedia: ["World Championship"], international: true },
 ] as const;
 
 export type LeagueCode = (typeof LEAGUES)[number]["code"];
@@ -20,3 +22,9 @@ export function isLeagueCode(v: unknown): v is LeagueCode {
 export function leagueInfo(code: string) {
   return LEAGUES.find((l) => l.code === code);
 }
+
+export function leagueName(code: string) {
+  return leagueInfo(code)?.name ?? code;
+}
+
+export const INTERNATIONAL = LEAGUES.filter((l) => "international" in l).map((l) => l.code) as LeagueCode[];

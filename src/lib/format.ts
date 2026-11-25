@@ -11,7 +11,7 @@ export function timeLabel(d: Date) {
   return new Intl.DateTimeFormat("fr-FR", { timeZone: TZ, hour: "2-digit", minute: "2-digit" }).format(d);
 }
 export function teamTag(name: string) {
-  const clean = name.replace(/[^\p{L}\p{N} ]/gu, "").trim();
+  const clean = name.replace(/\s*\([^)]*\)\s*$/, "").replace(/[^\p{L}\p{N} ]/gu, "").trim();
   const words = clean.split(/\s+/);
   if (clean.length <= 4) return clean.toUpperCase();
   return (words.length > 1 ? words.map((w) => w[0]).join("") : clean.slice(0, 3)).toUpperCase().slice(0, 4);

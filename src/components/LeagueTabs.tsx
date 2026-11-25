@@ -2,7 +2,7 @@ import Link from "next/link";
 import { LEAGUES } from "@/lib/leagues";
 
 export function LeagueTabs({ base, current, extra = {} }: { base: string; current?: string; extra?: Record<string, string> }) {
-  const tabs = [{ code: "", label: "Toutes" }, ...LEAGUES.map((l) => ({ code: l.code, label: l.code }))];
+  const tabs = [{ code: "", label: "Toutes" }, ...LEAGUES.map((l) => ({ code: l.code, label: l.name }))];
   return (
     <div className="-mx-4 flex gap-1 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0">
       {tabs.map((t) => {

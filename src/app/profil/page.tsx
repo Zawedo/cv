@@ -3,15 +3,18 @@ import { prisma } from "@/lib/db";
 import { leaderboard } from "@/lib/queries";
 import { dayLabel, timeLabel } from "@/lib/format";
 import { leagueInfo } from "@/lib/leagues";
+import Link from "next/link";
+import { maxBracketPoints, type BracketFormat } from "@/lib/bracket";
 import { Shell, PageTitle } from "@/components/Shell";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProfilPage() {
   const user = await requireUser();
-  const [preds, board] = await Promise.all([
+  const [preds, board, bracketPicks] = await Promise.all([
     prisma.prediction.findMany({ where: { userId: user.id }, include: { match: true }, orderBy: { match: { startTime: "desc" } }, take: 200 }),
     leaderboard(),
+    prisma.bracketPick.findMany({ where: { userId: user.id }, include: { bracket: true }, orderBy: { bracket: { lockAt: "desc" } } }),
   ]);
   const me = board.find((r) => r.userId === user.id);
   const pending = preds.filter((p) => p.points == null).length;
@@ -35,6 +38,22 @@ export default async function ProfilPage() {
           </div>
         ))}
       </div>
+
+      {bracketPicks.length > 0 && (
+        <>
+          <h2 className="h-display mb-3 text-2xl">Tableaux</h2>
+          <div className="card mb-8 divide-y divide-wina-line">
+            {bracketPicks.map((p) => (
+              <Link key={p.id} href={`/tableaux/${p.bracket.slug}`} className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-wina-ink">
+                <span className="skew-tag text-white" style={{ background: leagueInfo(p.bracket.event)?.color }}>{leagueInfo(p.bracket.event)?.name}</span>
+                <span className="flex-1 font-semibold">{p.bracket.name}</span>
+                {p.points == null ? <span className="text-wina-muted">en attente</span>
+                  : <b className="h-display text-xl">+{p.points} <span className="text-sm text-wina-muted">/ {maxBracketPoints(p.bracket.format as BracketFormat)}</span></b>}
+              </Link>
+            ))}
+          </div>
+        </>
+      )}
 
       <h2 className="h-display mb-3 text-2xl">Historique</h2>
       <div className="card divide-y divide-wina-line">

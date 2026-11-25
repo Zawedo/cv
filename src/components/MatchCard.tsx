@@ -2,13 +2,17 @@
 
 import { useState, useTransition } from "react";
 import { savePrediction } from "@/app/actions";
-import { TeamBadge } from "./TeamBadge";
+import { TeamLogo } from "./TeamLogo";
+import { displayTeam } from "@/lib/bracket";
 import { maxPoints, scoreOptions, winnerOf } from "@/lib/scoring";
 
 export type MatchCardData = {
   id: string;
   league: string;
   leagueColor: string;
+  leagueName: string;
+  logo1: string | null;
+  logo2: string | null;
   tournament: string;
   stage: string | null;
   team1: string;
@@ -47,7 +51,7 @@ export function MatchCard({ m }: { m: MatchCardData }) {
   return (
     <article className={`card relative overflow-hidden ${pick && !finished ? "border-l-4 border-l-wina-red" : ""}`}>
       <div className="flex items-center gap-2 border-b border-wina-line px-4 py-2 text-xs text-wina-muted">
-        <span className="skew-tag text-white" style={{ background: m.leagueColor }}>{m.league}</span>
+        <span className="skew-tag text-white" style={{ background: m.leagueColor }}>{m.leagueName}</span>
         <span className="truncate">{m.stage ?? m.tournament}</span>
         <span className="ml-auto font-semibold text-white">{m.time}</span>
         <span>BO{m.bestOf}</span>
@@ -56,11 +60,11 @@ export function MatchCard({ m }: { m: MatchCardData }) {
       </div>
 
       <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-2 px-3 py-4 sm:px-4 lg:items-center lg:gap-3">
-        <Team name={m.team1} picked={pickedWinner === 1} won={realWinner === 1} lost={realWinner === 2} />
+        <Team name={m.team1} logo={m.logo1} picked={pickedWinner === 1} won={realWinner === 1} lost={realWinner === 2} />
         <div className="h-display pt-1.5 text-center text-[26px] sm:text-3xl lg:pt-0">
           {finished ? <span>{m.team1Score}<span className="mx-1 text-wina-muted">-</span>{m.team2Score}</span> : <span className="text-wina-muted text-xl">VS</span>}
         </div>
-        <Team name={m.team2} right picked={pickedWinner === 2} won={realWinner === 2} lost={realWinner === 1} />
+        <Team name={m.team2} logo={m.logo2} right picked={pickedWinner === 2} won={realWinner === 2} lost={realWinner === 1} />
       </div>
 
       {!canceled && (
@@ -68,7 +72,7 @@ export function MatchCard({ m }: { m: MatchCardData }) {
           <div className={`grid gap-1.5 ${m.bestOf === 1 ? "grid-cols-2" : m.bestOf === 3 ? "grid-cols-4" : "grid-cols-6"}`}>
             {scoreOptions(m.bestOf).map((o) => {
               const selected = pick?.team1Score === o.team1Score && pick?.team2Score === o.team2Score;
-              const label = m.bestOf === 1 ? (o.team1Score ? m.team1 : m.team2) : `${o.team1Score}-${o.team2Score}`;
+              const label = m.bestOf === 1 ? displayTeam(o.team1Score ? m.team1 : m.team2) : `${o.team1Score}-${o.team2Score}`;
               return (
                 <button
                   key={label}
@@ -115,12 +119,12 @@ export function MatchCard({ m }: { m: MatchCardData }) {
   );
 }
 
-function Team({ name, right, picked, won, lost }: { name: string; right?: boolean; picked: boolean; won: boolean; lost: boolean }) {
+function Team({ name, logo, right, picked, won, lost }: { name: string; logo: string | null; right?: boolean; picked: boolean; won: boolean; lost: boolean }) {
   return (
     <div className={`flex min-w-0 flex-col items-center gap-1.5 text-center lg:flex-row lg:gap-3 ${right ? "lg:flex-row-reverse lg:text-right" : "lg:text-left"} ${lost ? "opacity-50" : ""}`}>
-      <TeamBadge name={name} />
+      <TeamLogo name={name} src={logo} />
       <div className="min-w-0">
-        <div className="h-display line-clamp-2 text-lg leading-tight sm:text-2xl lg:line-clamp-none lg:truncate">{name}</div>
+        <div className="h-display line-clamp-2 text-lg leading-tight sm:text-2xl lg:line-clamp-none lg:truncate">{displayTeam(name)}</div>
         {picked && <div className="text-xs font-semibold text-wina-red">Ton choix</div>}
         {won && !picked && <div className="text-xs text-green-400">Vainqueur</div>}
       </div>

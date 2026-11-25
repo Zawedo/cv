@@ -12,8 +12,9 @@ model User {
   email       String       @unique
   displayName String?      @unique
   createdAt   DateTime     @default(now())
-  sessions    Session[]
-  predictions Prediction[]
+  sessions     Session[]
+  predictions  Prediction[]
+  bracketPicks BracketPick[]
 }
 
 model LoginToken {
@@ -75,4 +76,41 @@ model Prediction {
 
   @@unique([userId, matchId])
   @@index([matchId])
+}
+
+/// Logos d'équipes (récupérés depuis Leaguepedia pendant la synchro)
+model Team {
+  name      String    @id
+  logoUrl   String?
+  checkedAt DateTime?
+}
+
+/// Tableau final d'un tournoi international. event : MSI | WORLDS. format : SINGLE_ELIM_8 | DOUBLE_ELIM_8
+/// seeds : JSON des 8 équipes dans l'ordre du premier tour. results : JSON { nœud: équipe gagnante }
+model Bracket {
+  id        String        @id @default(cuid())
+  slug      String        @unique
+  name      String
+  event     String
+  format    String
+  seeds     String
+  results   String        @default("{}")
+  lockAt    DateTime
+  manual    Boolean       @default(false)
+  updatedAt DateTime      @updatedAt
+  picks     BracketPick[]
+}
+
+model BracketPick {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bracketId String
+  bracket   Bracket  @relation(fields: [bracketId], references: [id], onDelete: Cascade)
+  picks     String   @default("{}")
+  points    Int?
+  correct   Int?
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, bracketId])
 }
