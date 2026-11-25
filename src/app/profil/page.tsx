@@ -27,11 +27,11 @@ export default async function ProfilPage() {
   return (
     <Shell user={user} active="/profil">
       <PageTitle kicker={user.email} title={user.displayName} />
-      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-5">
-        {stats.map((s) => (
-          <div key={s.label} className="card p-4">
-            <div className="text-xs uppercase text-wina-muted">{s.label}</div>
-            <div className="h-display text-3xl">{s.value}</div>
+      <div className="mb-6 grid grid-cols-6 gap-2 sm:mb-8 sm:grid-cols-5 sm:gap-3">
+        {stats.map((s, i) => (
+          <div key={s.label} className={`card min-w-0 p-3 sm:col-span-1 sm:p-4 ${i < 2 ? "col-span-3" : "col-span-2"}`}>
+            <div className="truncate text-[10px] uppercase text-wina-muted sm:text-xs">{s.label}</div>
+            <div className="h-display text-2xl sm:text-3xl">{s.value}</div>
           </div>
         ))}
       </div>
@@ -41,13 +41,13 @@ export default async function ProfilPage() {
         {preds.map(({ match: m, ...p }) => {
           const pickedName = p.team1Score > p.team2Score ? m.team1 : m.team2;
           return (
-            <div key={p.id} className="flex flex-wrap items-center gap-3 px-4 py-3 text-sm">
-              <span className="skew-tag text-white" style={{ background: leagueInfo(m.league)?.color }}>{m.league}</span>
-              <span className="w-40 text-wina-muted">{dayLabel(m.startTime)} {timeLabel(m.startTime)}</span>
-              <span className="flex-1 font-semibold">{m.team1} <span className="text-wina-muted">vs</span> {m.team2}</span>
-              <span>Prono : <b>{pickedName}</b> {m.bestOf > 1 && `(${p.team1Score}-${p.team2Score})`}</span>
-              <span className="w-28 text-right">
-                {m.status === "FINISHED" ? <span className="text-wina-muted">{m.team1Score}-{m.team2Score} · </span> : null}
+            <div key={p.id} className="grid grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-1.5 px-4 py-3 text-sm [grid-template-areas:'tag_date_pts'_'teams_teams_teams'_'prono_prono_prono'] lg:grid-cols-[52px_210px_1fr_auto_100px] lg:[grid-template-areas:'tag_date_teams_prono_pts']">
+              <span className="[grid-area:tag]"><span className="skew-tag text-white" style={{ background: leagueInfo(m.league)?.color }}>{m.league}</span></span>
+              <span className="text-wina-muted [grid-area:date]">{dayLabel(m.startTime)} · {timeLabel(m.startTime)}</span>
+              <span className="font-semibold [grid-area:teams]">{m.team1} <span className="text-wina-muted">vs</span> {m.team2}
+                {m.status === "FINISHED" && <span className="font-normal text-wina-muted"> ({m.team1Score}-{m.team2Score})</span>}</span>
+              <span className="text-wina-muted [grid-area:prono]">Prono : <b className="text-white">{pickedName}</b> {m.bestOf > 1 && `(${p.team1Score}-${p.team2Score})`}</span>
+              <span className="text-right [grid-area:pts]">
                 {p.points == null ? <span className="text-wina-muted">en attente</span>
                   : <b className={p.points > 0 ? (p.exact ? "text-wina-gold" : "text-green-400") : "text-wina-muted"}>+{p.points}</b>}
               </span>

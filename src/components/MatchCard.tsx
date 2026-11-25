@@ -55,16 +55,16 @@ export function MatchCard({ m }: { m: MatchCardData }) {
         {canceled && <span className="skew-tag bg-wina-line text-white">Annulé</span>}
       </div>
 
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 py-4">
+      <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-2 px-3 py-4 sm:px-4 lg:items-center lg:gap-3">
         <Team name={m.team1} picked={pickedWinner === 1} won={realWinner === 1} lost={realWinner === 2} />
-        <div className="h-display text-center text-3xl">
+        <div className="h-display pt-1.5 text-center text-[26px] sm:text-3xl lg:pt-0">
           {finished ? <span>{m.team1Score}<span className="mx-1 text-wina-muted">-</span>{m.team2Score}</span> : <span className="text-wina-muted text-xl">VS</span>}
         </div>
         <Team name={m.team2} right picked={pickedWinner === 2} won={realWinner === 2} lost={realWinner === 1} />
       </div>
 
       {!canceled && (
-        <div className="px-4 pb-4">
+        <div className="px-3 pb-4 sm:px-4">
           <div className={`grid gap-1.5 ${m.bestOf === 1 ? "grid-cols-2" : m.bestOf === 3 ? "grid-cols-4" : "grid-cols-6"}`}>
             {scoreOptions(m.bestOf).map((o) => {
               const selected = pick?.team1Score === o.team1Score && pick?.team2Score === o.team2Score;
@@ -75,7 +75,7 @@ export function MatchCard({ m }: { m: MatchCardData }) {
                   type="button"
                   disabled={m.locked || pending}
                   onClick={() => choose(o.team1Score, o.team2Score)}
-                  className={`h-display truncate py-2 text-lg transition ${
+                  className={`h-display truncate py-2.5 text-lg transition sm:py-2 ${
                     selected ? "bg-wina-red text-white" : "bg-wina-ink text-wina-muted enabled:hover:bg-wina-line enabled:hover:text-white"
                   } ${m.locked && !selected ? "opacity-40" : ""}`}
                   aria-pressed={selected}
@@ -99,9 +99,9 @@ export function MatchCard({ m }: { m: MatchCardData }) {
               <span>Pronos fermés</span>
             )}
             {m.community && m.community.total > 0 && (
-              <span className="ml-auto flex items-center gap-2">
+              <span className="flex w-full items-center justify-between gap-2 sm:ml-auto sm:w-auto sm:justify-start">
                 <span>{m.community.total} prono{m.community.total > 1 ? "s" : ""}</span>
-                <span className="flex h-1.5 w-24 overflow-hidden bg-wina-line">
+                <span className="flex h-1.5 flex-1 overflow-hidden bg-wina-line sm:w-24 sm:flex-none">
                   <span className="bg-wina-red" style={{ width: `${m.community.team1Pct}%` }} />
                 </span>
                 <span>{m.community.team1Pct}% / {100 - m.community.team1Pct}%</span>
@@ -117,10 +117,10 @@ export function MatchCard({ m }: { m: MatchCardData }) {
 
 function Team({ name, right, picked, won, lost }: { name: string; right?: boolean; picked: boolean; won: boolean; lost: boolean }) {
   return (
-    <div className={`flex min-w-0 items-center gap-3 ${right ? "flex-row-reverse text-right" : ""} ${lost ? "opacity-50" : ""}`}>
+    <div className={`flex min-w-0 flex-col items-center gap-1.5 text-center lg:flex-row lg:gap-3 ${right ? "lg:flex-row-reverse lg:text-right" : "lg:text-left"} ${lost ? "opacity-50" : ""}`}>
       <TeamBadge name={name} />
       <div className="min-w-0">
-        <div className="h-display truncate text-xl sm:text-2xl">{name}</div>
+        <div className="h-display line-clamp-2 text-lg leading-tight sm:text-2xl lg:line-clamp-none lg:truncate">{name}</div>
         {picked && <div className="text-xs font-semibold text-wina-red">Ton choix</div>}
         {won && !picked && <div className="text-xs text-green-400">Vainqueur</div>}
       </div>

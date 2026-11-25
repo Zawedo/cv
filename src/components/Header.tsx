@@ -4,17 +4,40 @@ import { logout } from "@/app/actions";
 import type { CurrentUser } from "@/lib/auth";
 
 const NAV = [
-  { href: "/matchs", label: "Matchs" },
-  { href: "/classement", label: "Classement" },
-  { href: "/profil", label: "Mes pronos" },
+  { href: "/matchs", label: "Matchs", icon: "M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2M9.5 6.5 21 18v3h-3l-1.5-1.5" },
+  { href: "/classement", label: "Classement", icon: "M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3" },
+  { href: "/profil", label: "Mes pronos", icon: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0" },
 ];
+
+function Icon({ d, className = "h-5 w-5" }: { d: string; className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d={d} />
+    </svg>
+  );
+}
+
+/** Barre d'onglets fixe en bas de l'écran, uniquement sur téléphone. */
+export function BottomNav({ active }: { active?: string }) {
+  return (
+    <nav aria-label="Navigation" className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-3 border-t-2 border-wina-red bg-wina-black/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden">
+      {NAV.map((n) => (
+        <Link key={n.href} href={n.href} aria-current={active === n.href ? "page" : undefined}
+          className={`h-display relative flex flex-col items-center gap-0.5 py-2 text-[15px] ${active === n.href ? "text-white before:absolute before:inset-x-1/4 before:-top-0.5 before:h-[3px] before:bg-white" : "text-wina-muted"}`}>
+          <Icon d={n.icon} className="h-[22px] w-[22px]" />
+          {n.label}
+        </Link>
+      ))}
+    </nav>
+  );
+}
 
 export function Header({ user, active }: { user: CurrentUser; active?: string }) {
   return (
     <header className="sticky top-0 z-20 border-b-2 border-wina-red bg-wina-black/95 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
-        <Link href="/matchs"><Logo /></Link>
-        <nav className="order-3 flex w-full gap-1 overflow-x-auto sm:order-none sm:w-auto">
+      <div className="mx-auto flex max-w-6xl items-center gap-6 px-4 py-2.5 sm:py-3">
+        <Link href="/matchs" className="shrink-0"><Logo /></Link>
+        <nav className="hidden gap-1 sm:flex">
           {[...NAV, ...(user.isAdmin ? [{ href: "/admin", label: "Admin" }] : [])].map((n) => (
             <Link
               key={n.href}
@@ -25,10 +48,13 @@ export function Header({ user, active }: { user: CurrentUser; active?: string })
             </Link>
           ))}
         </nav>
-        <div className="ml-auto flex items-center gap-3 text-sm">
-          <span className="font-semibold">{user.displayName}</span>
+        <div className="ml-auto flex min-w-0 items-center gap-3 text-sm">
+          <span className="truncate font-semibold">{user.displayName}</span>
           <form action={logout}>
-            <button className="text-wina-muted hover:text-white" title="Se déconnecter">Déconnexion</button>
+            <button className="flex p-1.5 text-wina-muted hover:text-white" title="Se déconnecter" aria-label="Déconnexion">
+              <span className="hidden sm:inline">Déconnexion</span>
+              <Icon d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" className="h-5 w-5 sm:hidden" />
+            </button>
           </form>
         </div>
       </div>

@@ -41,13 +41,13 @@ export default async function MatchsPage({ searchParams }: { searchParams: Promi
   return (
     <Shell user={user} active="/matchs">
       <PageTitle kicker={results ? "Résultats" : "À pronostiquer"} title={results ? "Matchs terminés" : "Prochains matchs"}>
-        <div className="flex gap-1">
-          <Link href={`/matchs${league ? `?ligue=${league}` : ""}`} className={!results ? "btn-red" : "btn-ghost"}>À venir</Link>
-          <Link href={`/matchs?vue=resultats${league ? `&ligue=${league}` : ""}`} className={results ? "btn-red" : "btn-ghost"}>Résultats</Link>
+        <div className="flex w-full gap-1 sm:w-auto">
+          <Link href={`/matchs${league ? `?ligue=${league}` : ""}`} className={`flex-1 sm:flex-none ${!results ? "btn-red" : "btn-ghost"}`}>À venir</Link>
+          <Link href={`/matchs?vue=resultats${league ? `&ligue=${league}` : ""}`} className={`flex-1 sm:flex-none ${results ? "btn-red" : "btn-ghost"}`}>Résultats</Link>
         </div>
       </PageTitle>
 
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 sm:mb-6 sm:gap-4">
         <LeagueTabs base="/matchs" current={league} extra={extra} />
         {!results && toPredict > 0 && (
           <span className="skew-tag bg-wina-gold text-black">{toPredict} match{toPredict > 1 ? "s" : ""} sans prono</span>
@@ -55,7 +55,7 @@ export default async function MatchsPage({ searchParams }: { searchParams: Promi
       </div>
 
       {!results && (
-        <p className="mb-6 text-sm text-wina-muted">
+        <p className="mb-4 text-[13px] text-wina-muted sm:mb-6 sm:text-sm">
           Bon vainqueur : <b className="text-white">{POINTS_WINNER} pts</b> · Score exact en BO3 : <b className="text-white">+{BONUS_EXACT_BO3}</b> · en BO5 : <b className="text-white">+{BONUS_EXACT_BO5}</b> · Les pronos ferment au coup d&apos;envoi.
         </p>
       )}
@@ -65,7 +65,7 @@ export default async function MatchsPage({ searchParams }: { searchParams: Promi
       <div className="space-y-8">
         {days.map((d) => (
           <section key={d.key}>
-            <h2 className="h-display mb-3 border-b border-wina-line pb-1 text-2xl">{d.label}</h2>
+            <h2 className="h-display sticky top-[53px] z-10 mb-3 border-b border-wina-line bg-wina-black pb-1 pt-1.5 text-2xl sm:static sm:pt-0">{d.label}</h2>
             <div className="grid gap-3 md:grid-cols-2">
               {d.items.map((c) => <MatchCard key={c.id} m={c} />)}
             </div>

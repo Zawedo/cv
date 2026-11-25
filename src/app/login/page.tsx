@@ -9,7 +9,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const { error } = await searchParams;
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
-      <section className="relative flex flex-col justify-between overflow-hidden bg-wina-red p-8 sm:p-12">
+      <section className="relative flex flex-col justify-between gap-8 overflow-hidden bg-wina-red px-5 py-7 sm:p-12">
         <div className="absolute -right-24 top-0 h-full w-72 -skew-x-12 bg-wina-red-dark/60" />
         <Logo size="lg" onRed />
         <div className="relative">
@@ -22,7 +22,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           {LEAGUES.map((l) => <span key={l.code} className="skew-tag bg-wina-black text-base">{l.code}</span>)}
         </div>
       </section>
-      <section className="flex items-center justify-center p-8">
+      <section className="flex items-center justify-center px-5 py-8 sm:p-8">
         <div className="w-full max-w-sm">
           <h2 className="h-display mb-2 text-3xl">Connexion</h2>
           <p className="mb-6 text-sm text-wina-muted">Pas de mot de passe : on t&apos;envoie un lien magique sur ton email pro.</p>
