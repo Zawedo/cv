@@ -1,14 +1,20 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { teamColor, teamTag } from "@/lib/format";
 
 /** Logo officiel si connu, sinon monogramme aux couleurs générées. */
 export function TeamLogo({ name, src, size = 44 }: { name: string; src?: string | null; size?: number }) {
   const [broken, setBroken] = useState(false);
+  const ref = useRef<HTMLImageElement>(null);
+  // L'image a pu échouer avant l'hydratation (onError manqué) : on vérifie au montage
+  useEffect(() => {
+    const img = ref.current;
+    if (img && img.complete && img.naturalWidth === 0) setBroken(true);
+  }, [src]);
   if (src && !broken) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={src} alt="" width={size} height={size} onError={() => setBroken(true)}
+      <img ref={ref} src={src} alt="" width={size} height={size} onError={() => setBroken(true)}
         className="shrink-0 object-contain" style={{ width: size, height: size }} />
     );
   }

@@ -1,6 +1,6 @@
 // Données de démonstration : `npm run db:seed`. Ne pas lancer en production.
 import { PrismaClient } from "@prisma/client";
-import { scorePrediction, scoreOptions } from "../src/lib/scoring";
+import { scorePrediction, scoreOptions, underdogMultiplier, applyMultiplier, winnerOf } from "../src/lib/scoring";
 import { resolve, FORMATS, scoreBracket, type BracketFormat, type Picks } from "../src/lib/bracket";
 
 const prisma = new PrismaClient();
@@ -31,28 +31,41 @@ async function main() {
   const offsets = { LCK: 8, LPL: 10, LEC: 17, LCS: 22 } as const; // heure de Paris approx.
   let n = 0;
   for (const [league, teams] of Object.entries(TEAMS)) {
-    for (let day = -6; day <= 6; day++) {
-      if ((day + league.length) % 2 !== 0) continue;
+    // ~5 mois d'historique (1 match tous les 3 jours) puis la quinzaine en cours (2 matchs un jour sur deux)
+    for (let day = -150; day <= 6; day++) {
+      if (day < -7 ? (day + league.length) % 3 !== 0 : (day + league.length) % 2 !== 0) continue;
       const d = new Date(now + day * 864e5);
       d.setUTCHours(offsets[league as keyof typeof offsets] - 1, 0, 0, 0);
-      for (let k = 0; k < 2; k++) {
+      for (let k = 0; k < (day < -7 ? 1 : 2); k++) {
         const [a, b] = [...teams].sort(() => rnd() - 0.5);
         const bestOf = league === "LEC" && day < 0 ? 1 : day === 6 ? 5 : 3;
         const startTime = new Date(d.getTime() + k * 3 * 3600e3);
         const finished = startTime.getTime() + 3 * 3600e3 < now;
-        const res = finished ? pick(scoreOptions(bestOf)) : null;
+        // Un favori par match : ~75 % des joueurs le choisissent, il gagne 2 fois sur 3
+        const fav = rnd() < 0.5 ? 1 : 2;
+        const side = (w: number) => pick(scoreOptions(bestOf).filter((o) => winnerOf(o) === w));
+        const res = finished ? side(rnd() < 0.66 ? fav : 3 - fav) : null;
         const m = await prisma.match.create({
           data: {
-            externalId: `demo:${n++}`, league, tournament: `${league} 2026`, stage: `Semaine ${7 + Math.floor((day + 7) / 7)}`,
+            externalId: `demo:${n++}`, league, tournament: `${league} 2026`, stage: `Semaine ${Math.floor((day + 154) / 7) % 10 + 1}`,
             team1: a, team2: b, bestOf, startTime, status: finished ? "FINISHED" : startTime.getTime() < now ? "LIVE" : "UPCOMING",
             team1Score: res?.team1Score ?? null, team2Score: res?.team2Score ?? null, winner: res ? (res.team1Score > res.team2Score ? 1 : 2) : null,
           },
         });
         for (const u of users) {
           if (rnd() < 0.25 || (!finished && rnd() < 0.5)) continue;
-          const p = pick(scoreOptions(bestOf));
+          const p = side(rnd() < 0.75 ? fav : 3 - fav);
           const r = res ? scorePrediction(bestOf, p, res) : null;
           await prisma.prediction.create({ data: { userId: u.id, matchId: m.id, ...p, points: r?.points ?? null, exact: r?.exact ?? null } });
+        }
+        if (res) {
+          // bonus contre la majorité, comme à la synchro
+          const preds = await prisma.prediction.findMany({ where: { matchId: m.id } });
+          const t1 = preds.filter((x) => winnerOf(x) === 1).length;
+          for (const x of preds) {
+            const mult = underdogMultiplier(winnerOf(x) === 1 ? t1 : preds.length - t1, preds.length);
+            await prisma.prediction.update({ where: { id: x.id }, data: { multiplier: mult, points: applyMultiplier(x.points ?? 0, mult) } });
+          }
         }
       }
     }

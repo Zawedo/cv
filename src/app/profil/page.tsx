@@ -1,6 +1,7 @@
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { leaderboard } from "@/lib/queries";
+import { getBadges, leaderboard } from "@/lib/queries";
+import { BadgeGrid } from "@/components/BadgeGrid";
 import { dayLabel, timeLabel } from "@/lib/format";
 import { leagueInfo } from "@/lib/leagues";
 import Link from "next/link";
@@ -13,11 +14,12 @@ export const dynamic = "force-dynamic";
 
 export default async function ProfilPage() {
   const user = await requireUser();
-  const [preds, board, bracketPicks, settings] = await Promise.all([
+  const [preds, board, bracketPicks, settings, badges] = await Promise.all([
     prisma.prediction.findMany({ where: { userId: user.id }, include: { match: true }, orderBy: { match: { startTime: "desc" } }, take: 200 }),
     leaderboard(),
     prisma.bracketPick.findMany({ where: { userId: user.id }, include: { bracket: true }, orderBy: { bracket: { lockAt: "desc" } } }),
     prisma.user.findUniqueOrThrow({ where: { id: user.id }, select: { slackReminders: true } }),
+    getBadges(user.id),
   ]);
   const me = board.find((r) => r.userId === user.id);
   const pending = preds.filter((p) => p.points == null).length;
@@ -43,6 +45,8 @@ export default async function ProfilPage() {
           </div>
         ))}
       </div>
+
+      <BadgeGrid badges={badges} own />
 
       {slackConfig().dm && <SlackToggle initial={settings.slackReminders} />}
 

@@ -19,6 +19,9 @@ Tous les matchs des ligues majeures (**LCK, LPL, LEC, LCS**) et des tournois int
   - en message privé (bot) : environ 1 h avant un match non pronostiqué, 3 h avant la fermeture d'un tableau incomplet. Seulement les joueurs actifs ces 30 derniers jours, désactivable dans le profil. Le compte Slack est retrouvé via l'email Winamax ;
   - sur une chaîne : programme du jour à 9 h (Paris), classement du lundi avec le coup d'outsider de la semaine, ouverture des tableaux MSI / Worlds ;
   - chaque rappel est tracé (`ReminderLog`) et n'est jamais envoyé deux fois.
+- **Classements par période** (`src/lib/periods.ts`) : général, par mois et par split, combinables avec le filtre par ligue, avec navigation vers les périodes passées. Splits (heure de Paris) : Split 1 du 1er janvier, Split 2 du 1er avril (MSI inclus), Split 3 du 21 juillet, Worlds du 1er octobre — à ajuster dans `SPLITS` si le calendrier change. Les points des tableaux comptent dans la période où le tableau a fermé.
+- **Pronos des autres** : visibles sur la carte d'un match une fois commencé, et sur la page de chaque joueur (`/joueurs/[id]`, accessible depuis le classement). Les pronos des matchs à venir restent secrets.
+- **Badges** (`src/lib/badges.ts`) : 15 badges calculés à partir de l'activité (participation, séries, scores exacts, bonus outsider, ligues, tableaux, champion du mois, podium de split), avec progression pour ceux pas encore obtenus.
 - **Tendance de la communauté** (% par équipe), visible une fois qu'on a pronostiqué, pour ne pas influencer.
 - **Classement** général et par ligue, avec podium. Départage : points, puis scores exacts, puis bons vainqueurs.
 - **Mes pronos** : historique et statistiques personnelles.

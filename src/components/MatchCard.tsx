@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { savePrediction } from "@/app/actions";
 import { TeamLogo } from "./TeamLogo";
 import { displayTeam } from "@/lib/bracket";
@@ -24,6 +25,8 @@ export type MatchCardData = {
   team1Score: number | null;
   team2Score: number | null;
   pick: { team1Score: number; team2Score: number; points: number | null; exact: boolean | null; multiplier: number | null } | null;
+  /** Pronos des autres joueurs, seulement une fois le match commencé */
+  others: { userId: string; name: string; team1Score: number; team2Score: number; points: number | null; multiplier: number | null }[];
   /** total et team1 incluent le prono enregistré de l'utilisateur */
   community: { total: number; team1: number; team1Pct: number } | null;
 };
@@ -31,6 +34,7 @@ export type MatchCardData = {
 export function MatchCard({ m }: { m: MatchCardData }) {
   const [pick, setPick] = useState(m.pick);
   const [error, setError] = useState<string | null>(null);
+  const [showOthers, setShowOthers] = useState(false);
   const [pending, start] = useTransition();
   const finished = m.status === "FINISHED";
   const canceled = m.status === "CANCELED";
@@ -130,6 +134,32 @@ export function MatchCard({ m }: { m: MatchCardData }) {
             </p>
           )}
           {error && <p className="mt-2 text-xs text-wina-red">{error}</p>}
+          {m.others.length > 0 && (
+            <div className="mt-3 border-t border-wina-line pt-2">
+              <button type="button" onClick={() => setShowOthers((v) => !v)} aria-expanded={showOthers}
+                className="text-xs font-semibold text-wina-muted hover:text-white">
+                {showOthers ? "Masquer les pronos" : `Voir les pronos des autres (${m.others.length})`}
+              </button>
+              {showOthers && (
+                <ul className="mt-2 grid gap-x-4 gap-y-1 text-xs sm:grid-cols-2">
+                  {m.others.map((o) => {
+                    const w = o.team1Score > o.team2Score ? m.team1 : m.team2;
+                    return (
+                      <li key={o.userId} className="flex min-w-0 items-center gap-2">
+                        <Link href={`/joueurs/${o.userId}`} className="min-w-0 flex-1 truncate font-semibold hover:underline">{o.name}</Link>
+                        <span className="truncate text-wina-muted">{displayTeam(w)}{m.bestOf > 1 ? ` ${o.team1Score}-${o.team2Score}` : ""}</span>
+                        {o.points != null && (
+                          <b className={`w-12 shrink-0 text-right ${o.points > 0 ? "text-green-400" : "text-wina-muted"}`}>
+                            +{o.points}{(o.multiplier ?? 1) > 1 && o.points > 0 ? <span className="text-wina-gold"> ×{String(o.multiplier).replace(".", ",")}</span> : null}
+                          </b>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          )}
         </div>
       )}
     </article>
