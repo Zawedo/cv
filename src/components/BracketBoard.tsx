@@ -120,7 +120,7 @@ function NodeCard({ n, result, locked, logos, onPick }: {
             className={`flex w-full items-center gap-2.5 px-3 py-2 text-left transition ${i ? "border-t border-wina-line" : ""}
               ${picked && !result ? "bg-wina-red" : ""} ${picked && won ? "bg-green-700" : ""} ${wrong ? "bg-wina-red/25" : ""}
               ${!locked && t && !picked ? "hover:bg-wina-line" : ""}`}>
-            {t ? <TeamLogo name={t} src={logos[t]} size={28} /> : <span className="h-7 w-7 shrink-0 border border-dashed border-wina-line" />}
+            {t ? <span className={picked && (!result || won) ? "bg-black/45 p-0.5" : ""}><TeamLogo name={t} src={logos[t]} size={picked && (!result || won) ? 24 : 28} /></span> : <span className="h-7 w-7 shrink-0 border border-dashed border-wina-line" />}
             <span className={`h-display min-w-0 flex-1 truncate text-lg ${t ? "" : "text-wina-muted"} ${wrong ? "line-through opacity-70" : ""}`}>
               {t ? displayTeam(t) : "À déterminer"}
             </span>
