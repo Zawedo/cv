@@ -1,0 +1,11 @@
+export function Logo({ size = "md", onRed = false }: { size?: "md" | "lg"; onRed?: boolean }) {
+  const big = size === "lg";
+  return (
+    <span className="inline-flex items-center gap-2">
+      <span className={`${onRed ? "bg-wina-black" : "bg-wina-red"} -skew-x-12 ${big ? "px-3 py-1 text-4xl" : "px-2 py-0.5 text-xl"} h-display`}>
+        <span className="inline-block skew-x-12">Wina</span>
+      </span>
+      <span className={`h-display ${big ? "text-4xl" : "text-xl"}`}>LoL Pronos</span>
+    </span>
+  );
+}

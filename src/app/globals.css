@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: dark; }
+body { @apply bg-wina-black text-white font-sans antialiased; }
+
+@layer components {
+  .h-display { @apply font-display font-extrabold italic uppercase tracking-tight; }
+  .btn { @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 font-display font-bold italic uppercase tracking-wide transition disabled:opacity-50 disabled:cursor-not-allowed; }
+  .btn-red { @apply btn bg-wina-red text-white hover:bg-wina-red-dark; }
+  .btn-ghost { @apply btn border border-wina-line text-white hover:border-white; }
+  .input { @apply w-full bg-wina-ink border border-wina-line px-4 py-3 text-white placeholder:text-wina-muted focus:outline-none focus:border-wina-red; }
+  .card { @apply bg-wina-card border border-wina-line; }
+  .skew-tag { @apply inline-block -skew-x-12 px-2 py-0.5 text-xs font-display font-bold uppercase; }
+}
