@@ -9,7 +9,12 @@ datasource db {
 
 model User {
   id          String       @id @default(cuid())
-  email       String       @unique
+  /// Facultatif : sert uniquement à retrouver le joueur sur Slack
+  email       String?      @unique
+  /// Empreinte du code de récupération (jamais le code en clair)
+  recoveryHash        String?
+  recoveryFails       Int       @default(0)
+  recoveryLockedUntil DateTime?
   displayName String?      @unique
   /// Rappels Slack en message privé (désactivables depuis le profil)
   slackReminders Boolean   @default(true)
@@ -19,17 +24,6 @@ model User {
   sessions     Session[]
   predictions  Prediction[]
   bracketPicks BracketPick[]
-}
-
-model LoginToken {
-  id        String    @id @default(cuid())
-  tokenHash String    @unique
-  email     String
-  expiresAt DateTime
-  usedAt    DateTime?
-  createdAt DateTime  @default(now())
-
-  @@index([email, createdAt])
 }
 
 model Session {

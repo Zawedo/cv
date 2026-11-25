@@ -21,8 +21,9 @@ async function log(keys: string[]) {
 }
 
 /** Slack ID du joueur, retrouvé une fois via son email puis mémorisé ("" = pas de compte Slack). */
-async function slackIdOf(u: { id: string; email: string; slackId: string | null }) {
+async function slackIdOf(u: { id: string; email: string | null; slackId: string | null }) {
   if (u.slackId !== null) return u.slackId || null;
+  if (!u.email) return null;
   const id = await lookupSlackId(u.email);
   await prisma.user.update({ where: { id: u.id }, data: { slackId: id ?? "" } });
   return id;
@@ -40,7 +41,7 @@ export async function runReminders(now = new Date()) {
   if (slack.dm) {
     const users = await prisma.user.findMany({
       where: {
-        slackReminders: true, displayName: { not: null },
+        slackReminders: true, displayName: { not: null }, email: { not: null }, // l'email sert à retrouver le compte Slack
         OR: [{ createdAt: { gt: new Date(now.getTime() - ACTIVE_DAYS * 864e5) } }, { predictions: { some: { updatedAt: { gt: new Date(now.getTime() - ACTIVE_DAYS * 864e5) } } } }],
       },
       select: { id: true, email: true, slackId: true },

@@ -5,7 +5,7 @@ Tous les matchs des ligues majeures (**LCK, LPL, LEC, LCS**) et des tournois int
 
 ## Fonctionnalités
 
-- **Accès restreint** : connexion par lien magique envoyé par email, uniquement pour les domaines autorisés (`@winamax.fr`, `@winamax.com` par défaut). Pas de mot de passe.
+- **Accès sans connexion** : le site n'est pas indexé et son lien n'est partagé qu'en interne. À la première visite, on choisit un pseudo ; le navigateur le mémorise (cookie de session d'un an). Un **code de récupération** (ex. `K7QM-4XPA`), affiché à l'inscription et régénérable depuis le profil, permet de retrouver son compte sur un autre appareil. Il est stocké haché ; 5 mauvais essais bloquent le pseudo 15 minutes.
 - **Pronos** sur chaque match : on choisit le score (2-0, 2-1, 1-2… selon le BO). Modifiable jusqu'au coup d'envoi, verrouillé côté serveur ensuite.
 - **Barème** (`src/lib/scoring.ts`) :
   | | BO1 | BO3 | BO5 |
@@ -16,7 +16,7 @@ Tous les matchs des ligues majeures (**LCK, LPL, LEC, LCS**) et des tournois int
 - **Logos des équipes** récupérés depuis Leaguepedia pendant la synchro et servis par `/api/logo` (Leaguepedia bloque l'affichage direct depuis un autre site). Monogramme en repli.
 - **Bonus contre la majorité** (`src/lib/scoring.ts`) : si ton vainqueur est le bon et que 35 % ou moins des joueurs l'avaient choisi, tes points du match sont multipliés par 1,5 ; sous 20 %, par 2 (à partir de 5 pronos sur le match, arrondi à l'entier). La répartition est figée au coup d'envoi ; avant, la carte indique le bonus possible « pour l'instant ». Pas de bonus sur les tableaux.
 - **Rappels Slack** (`src/lib/reminders.ts`, `src/lib/reminders-run.ts`) :
-  - en message privé (bot) : environ 1 h avant un match non pronostiqué, 3 h avant la fermeture d'un tableau incomplet. Seulement les joueurs actifs ces 30 derniers jours, désactivable dans le profil. Le compte Slack est retrouvé via l'email Winamax ;
+  - en message privé (bot), pour les joueurs qui ont renseigné leur email Winamax dans leur profil : environ 1 h avant un match non pronostiqué, 3 h avant la fermeture d'un tableau incomplet. Seulement les joueurs actifs ces 30 derniers jours, désactivable dans le profil ;
   - sur une chaîne : programme du jour à 9 h (Paris), classement du lundi avec le coup d'outsider de la semaine, ouverture des tableaux MSI / Worlds ;
   - chaque rappel est tracé (`ReminderLog`) et n'est jamais envoyé deux fois.
 - **Classements par période** (`src/lib/periods.ts`) : général, par mois et par split, combinables avec le filtre par ligue, avec navigation vers les périodes passées. Splits (heure de Paris) : Split 1 du 1er janvier, Split 2 du 1er avril (MSI inclus), Split 3 du 21 juillet, Worlds du 1er octobre — à ajuster dans `SPLITS` si le calendrier change. Les points des tableaux comptent dans la période où le tableau a fermé.
@@ -25,7 +25,7 @@ Tous les matchs des ligues majeures (**LCK, LPL, LEC, LCS**) et des tournois int
 - **Tendance de la communauté** (% par équipe), visible une fois qu'on a pronostiqué, pour ne pas influencer.
 - **Classement** général et par ligue, avec podium. Départage : points, puis scores exacts, puis bons vainqueurs.
 - **Mes pronos** : historique et statistiques personnelles.
-- **Admin** (emails dans `ADMIN_EMAILS`) : synchro manuelle, ajout de matchs, correction de résultats (recalcul automatique des points).
+- **Admin** (lien secret `/admin/acces?cle=<ADMIN_KEY>`, qui donne les droits à ce navigateur) : synchro manuelle, ajout de matchs, correction de résultats (recalcul automatique des points).
 
 ## Stack
 
@@ -41,8 +41,7 @@ npm run db:seed             # optionnel : 8 joueurs et 48 matchs de démo
 npm run dev
 ```
 
-Sans `SMTP_URL`, le lien de connexion s'affiche dans la console et sur la page de login (dev uniquement).
-Ajoute ton email dans `ADMIN_EMAILS` pour accéder à `/admin`.
+Pour accéder à `/admin` en local : renseigne `ADMIN_KEY` puis ouvre `http://localhost:3000/admin/acces?cle=<ta clé>`.
 
 Tests : `npm test` (barème, mapping des données).
 
@@ -75,15 +74,15 @@ Pour brancher une autre source (API officielle, PandaScore…), il suffit d'impl
 ## Mise en production
 
 1. **Base** : remplacer `provider = "sqlite"` par `"postgresql"` dans `prisma/schema.prisma` et pointer `DATABASE_URL` vers la base (Neon, Supabase, RDS…).
-2. **Variables** : `APP_URL`, `ALLOWED_EMAIL_DOMAINS`, `ADMIN_EMAILS`, `CRON_SECRET`, `SMTP_URL` (obligatoire en prod), `MAIL_FROM`.
+2. **Variables** : `APP_URL`, `ADMIN_KEY`, `CRON_SECRET`, et Slack si besoin.
 3. **Déploiement** : Vercel ou tout hébergeur Node (`npm run build && npm start`).
 4. **Synchro** : configurer les secrets GitHub du workflow, ou le cron de l'hébergeur.
 
 ## Sécurité
 
-- Domaine email vérifié strictement (un `@winamax.fr.evil.com` est refusé).
-- Jetons de connexion et de session stockés hachés (SHA-256), lien à usage unique valable 15 min, consommé par POST (résiste au pré-clic des antivirus mail).
-- Limite de 5 demandes de lien par email / 10 min.
-- Cookies `httpOnly`, `sameSite=lax`, `secure` en prod. Site non indexé.
+- Pas de compte email : la confidentialité repose sur le lien du site, partagé uniquement en interne, et sur la non-indexation (`robots: noindex`).
+- Codes de récupération et jetons de session stockés hachés (SHA-256), comparaisons à temps constant ; 5 mauvais codes bloquent le pseudo 15 minutes.
+- Droits admin par lien secret ; le cookie admin ne contient qu'une empreinte de la clé.
+- Cookies `httpOnly`, `sameSite=lax`, `secure` en prod. Pronos des autres visibles seulement après le coup d'envoi.
 
 > Jeu gratuit, sans mise ni gain d'argent. Identité visuelle inspirée de la DA Winamax : à valider avec l'équipe brand (logo officiel, typographies).

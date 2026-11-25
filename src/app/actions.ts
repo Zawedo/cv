@@ -3,68 +3,81 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { config, isAllowedEmail, normalizeEmail } from "@/lib/config";
-import {
-  LOGIN_TOKEN_MINUTES, createSession, destroySession, getCurrentUser, hashToken, randomToken, requireAdmin, requireUser,
-} from "@/lib/auth";
-import { sendLoginEmail } from "@/lib/mail";
+import { isValidEmail, normalizeEmail } from "@/lib/config";
+import { createSession, destroySession, getCurrentUser, requireAdmin, requireUser } from "@/lib/auth";
+import { LOCK_MINUTES, MAX_ATTEMPTS, codeMatches, hashCode, newRecoveryCode } from "@/lib/recovery";
 import { isValidScore } from "@/lib/scoring";
 import { isLeagueCode } from "@/lib/leagues";
 import { settleMatch, syncMatches } from "@/lib/sync";
 
-export type FormState = { ok?: boolean; error?: string; message?: string; devLink?: string };
+export type FormState = { ok?: boolean; error?: string; message?: string; code?: string };
 
-// ---------- Connexion ----------
+const PSEUDO = /^[\p{L}\p{N} _.\-]{3,20}$/u;
 
-export async function requestLogin(_: FormState, form: FormData): Promise<FormState> {
-  const email = normalizeEmail(String(form.get("email") ?? ""));
-  if (!isAllowedEmail(email)) {
-    return { error: `Accès réservé aux adresses ${config.allowedDomains.map((d) => "@" + d).join(" / ")}.` };
-  }
-  const recent = await prisma.loginToken.count({
-    where: { email, createdAt: { gt: new Date(Date.now() - 10 * 60e3) } },
-  });
-  if (recent >= 5) return { error: "Trop de demandes. Réessaie dans quelques minutes." };
+// ---------- Arrivée sur le site ----------
 
-  const token = randomToken();
-  await prisma.loginToken.create({
-    data: { email, tokenHash: hashToken(token), expiresAt: new Date(Date.now() + LOGIN_TOKEN_MINUTES * 60e3) },
-  });
-  const { devLink } = await sendLoginEmail(email, `${config.appUrl}/auth/verify?token=${token}`);
-  return { ok: true, message: `Lien envoyé à ${email}. Vérifie ta boîte mail.`, devLink };
+/** Nouveau joueur : choisit un pseudo, reçoit son code de récupération. */
+export async function createPlayer(_: FormState, form: FormData): Promise<FormState> {
+  if (await getCurrentUser()) redirect("/matchs");
+  const name = String(form.get("displayName") ?? "").trim();
+  if (!PSEUDO.test(name)) return { error: "3 à 20 caractères : lettres, chiffres, espaces, _ . -" };
+  const taken = await prisma.user.findFirst({ where: { displayName: name } });
+  if (taken) return { error: "Ce pseudo est déjà pris. Si c'est le tien, utilise ton code de récupération." };
+  const code = newRecoveryCode();
+  const user = await prisma.user.create({ data: { displayName: name, recoveryHash: hashCode(code) } });
+  await createSession(user.id);
+  return { ok: true, code };
 }
 
-/** Consommé via un formulaire (POST) pour éviter que les antivirus mail qui « pré-cliquent » ne brûlent le lien. */
-export async function verifyLogin(form: FormData) {
-  const token = String(form.get("token") ?? "");
-  const row = await prisma.loginToken.findUnique({ where: { tokenHash: hashToken(token) } });
-  if (!row || row.usedAt || row.expiresAt < new Date() || !isAllowedEmail(row.email)) {
-    redirect("/login?error=lien");
+/** Joueur existant sur un nouvel appareil : pseudo + code de récupération. */
+export async function recoverPlayer(_: FormState, form: FormData): Promise<FormState> {
+  const name = String(form.get("displayName") ?? "").trim();
+  const code = String(form.get("code") ?? "");
+  const user = await prisma.user.findFirst({ where: { displayName: name } });
+  const wrong = { error: "Pseudo ou code incorrect." };
+  if (!user) return wrong;
+  if (user.recoveryLockedUntil && user.recoveryLockedUntil > new Date()) {
+    return { error: `Trop d'essais. Réessaie dans ${LOCK_MINUTES} minutes.` };
   }
-  const claimed = await prisma.loginToken.updateMany({ where: { id: row.id, usedAt: null }, data: { usedAt: new Date() } });
-  if (claimed.count === 0) redirect("/login?error=lien");
-
-  const user = await prisma.user.upsert({ where: { email: row.email }, create: { email: row.email }, update: {} });
+  if (!codeMatches(code, user.recoveryHash)) {
+    const fails = user.recoveryFails + 1;
+    await prisma.user.update({
+      where: { id: user.id },
+      data: fails >= MAX_ATTEMPTS ? { recoveryFails: 0, recoveryLockedUntil: new Date(Date.now() + LOCK_MINUTES * 60e3) } : { recoveryFails: fails },
+    });
+    return wrong;
+  }
+  await prisma.user.update({ where: { id: user.id }, data: { recoveryFails: 0, recoveryLockedUntil: null } });
   await createSession(user.id);
-  redirect(user.displayName ? "/matchs" : "/onboarding");
+  redirect("/matchs");
+}
+
+/** Nouveau code (l'ancien ne marche plus). Affiché une seule fois. */
+export async function regenerateRecovery(): Promise<FormState> {
+  const user = await requireUser();
+  const code = newRecoveryCode();
+  await prisma.user.update({ where: { id: user.id }, data: { recoveryHash: hashCode(code), recoveryFails: 0, recoveryLockedUntil: null } });
+  return { ok: true, code };
 }
 
 export async function logout() {
   await destroySession();
-  redirect("/login");
+  redirect("/bienvenue");
 }
 
-export async function setDisplayName(_: FormState, form: FormData): Promise<FormState> {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
-  const name = String(form.get("displayName") ?? "").trim();
-  if (!/^[\p{L}\p{N} _.\-]{3,20}$/u.test(name)) {
-    return { error: "3 à 20 caractères : lettres, chiffres, espaces, _ . -" };
+/** Email facultatif, utilisé seulement pour retrouver le joueur sur Slack. */
+export async function setSlackEmail(_: FormState, form: FormData): Promise<FormState> {
+  const user = await requireUser();
+  const raw = String(form.get("email") ?? "");
+  const email = raw.trim() ? normalizeEmail(raw) : null;
+  if (email && !isValidEmail(email)) return { error: "Adresse email invalide." };
+  if (email) {
+    const other = await prisma.user.findFirst({ where: { email, NOT: { id: user.id } } });
+    if (other) return { error: "Cette adresse est déjà utilisée par un autre joueur." };
   }
-  const taken = await prisma.user.findFirst({ where: { displayName: name, NOT: { id: user.id } } });
-  if (taken) return { error: "Ce pseudo est déjà pris." };
-  await prisma.user.update({ where: { id: user.id }, data: { displayName: name } });
-  redirect("/matchs");
+  await prisma.user.update({ where: { id: user.id }, data: { email, slackId: null } });
+  revalidatePath("/profil");
+  return { ok: true, message: email ? "Email enregistré." : "Email retiré." };
 }
 
 // ---------- Pronostics ----------

@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Logo } from "./Logo";
-import { logout } from "@/app/actions";
 import type { CurrentUser } from "@/lib/auth";
 
 const NAV = [
@@ -49,15 +48,10 @@ export function Header({ user, active }: { user: CurrentUser; active?: string })
             </Link>
           ))}
         </nav>
-        <div className="ml-auto flex min-w-0 items-center gap-3 text-sm">
-          <span className="truncate font-semibold">{user.displayName}</span>
-          <form action={logout}>
-            <button className="flex p-1.5 text-wina-muted hover:text-white" title="Se déconnecter" aria-label="Déconnexion">
-              <span className="hidden sm:inline">Déconnexion</span>
-              <Icon d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" className="h-5 w-5 sm:hidden" />
-            </button>
-          </form>
-        </div>
+        <Link href="/profil" className="ml-auto flex min-w-0 items-center gap-2 text-sm font-semibold hover:text-wina-red" title="Mon profil">
+          <span className="truncate">{user.displayName}</span>
+          <Icon d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0" className="h-5 w-5 shrink-0 text-wina-muted" />
+        </Link>
       </div>
     </header>
   );

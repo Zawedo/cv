@@ -8,6 +8,8 @@ import Link from "next/link";
 import { maxBracketPoints, type BracketFormat } from "@/lib/bracket";
 import { Shell, PageTitle } from "@/components/Shell";
 import { SlackToggle } from "./SlackToggle";
+import { RecoveryCard } from "./RecoveryCard";
+import { logout } from "../actions";
 import { slackConfig } from "@/lib/slack";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +20,7 @@ export default async function ProfilPage() {
     prisma.prediction.findMany({ where: { userId: user.id }, include: { match: true }, orderBy: { match: { startTime: "desc" } }, take: 200 }),
     leaderboard(),
     prisma.bracketPick.findMany({ where: { userId: user.id }, include: { bracket: true }, orderBy: { bracket: { lockAt: "desc" } } }),
-    prisma.user.findUniqueOrThrow({ where: { id: user.id }, select: { slackReminders: true } }),
+    prisma.user.findUniqueOrThrow({ where: { id: user.id }, select: { slackReminders: true, email: true } }),
     getBadges(user.id),
   ]);
   const me = board.find((r) => r.userId === user.id);
@@ -36,7 +38,7 @@ export default async function ProfilPage() {
 
   return (
     <Shell user={user} active="/profil">
-      <PageTitle kicker={user.email} title={user.displayName} />
+      <PageTitle kicker="Mon profil" title={user.displayName} />
       <div className="mb-6 grid grid-cols-6 gap-2 sm:mb-8 sm:grid-cols-6 sm:gap-3">
         {stats.map((s, i) => (
           <div key={s.label} className={`card min-w-0 p-3 sm:col-span-1 sm:p-4 col-span-2`}>
@@ -48,7 +50,9 @@ export default async function ProfilPage() {
 
       <BadgeGrid badges={badges} own />
 
-      {slackConfig().dm && <SlackToggle initial={settings.slackReminders} />}
+      <RecoveryCard />
+
+      {slackConfig().dm && <SlackToggle initial={settings.slackReminders} email={settings.email} />}
 
       {bracketPicks.length > 0 && (
         <>
@@ -86,6 +90,10 @@ export default async function ProfilPage() {
         })}
         {preds.length === 0 && <div className="p-10 text-center text-wina-muted">Aucun prono pour l&apos;instant. Direction l&apos;onglet Matchs !</div>}
       </div>
+      <form action={logout} className="mt-10 border-t border-wina-line pt-6 text-sm text-wina-muted">
+        <p className="mb-3">Pour revenir sur ce compte après t&apos;être déconnecté, il te faudra ton pseudo et ton code de récupération.</p>
+        <button className="btn-ghost">Se déconnecter de cet appareil</button>
+      </form>
     </Shell>
   );
 }
