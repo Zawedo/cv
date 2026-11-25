@@ -8,7 +8,6 @@ import Link from "next/link";
 import { maxBracketPoints, type BracketFormat } from "@/lib/bracket";
 import { Shell, PageTitle } from "@/components/Shell";
 import { SlackToggle } from "./SlackToggle";
-import { RecoveryCard } from "./RecoveryCard";
 import { logout } from "../actions";
 import { slackConfig } from "@/lib/slack";
 
@@ -50,8 +49,6 @@ export default async function ProfilPage() {
 
       <BadgeGrid badges={badges} own />
 
-      <RecoveryCard />
-
       {slackConfig().dm && <SlackToggle initial={settings.slackReminders} email={settings.email} />}
 
       {bracketPicks.length > 0 && (
@@ -91,7 +88,7 @@ export default async function ProfilPage() {
         {preds.length === 0 && <div className="p-10 text-center text-wina-muted">Aucun prono pour l&apos;instant. Direction l&apos;onglet Matchs !</div>}
       </div>
       <form action={logout} className="mt-10 border-t border-wina-line pt-6 text-sm text-wina-muted">
-        <p className="mb-3">Pour revenir sur ce compte après t&apos;être déconnecté, il te faudra ton pseudo et ton code de récupération.</p>
+        <p className="mb-3">Après t&apos;être déconnecté, tu ne pourras revenir sur ce compte qu&apos;avec un lien d&apos;accès demandé à un admin.</p>
         <button className="btn-ghost">Se déconnecter de cet appareil</button>
       </form>
     </Shell>

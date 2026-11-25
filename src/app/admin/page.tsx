@@ -4,12 +4,13 @@ import { config } from "@/lib/config";
 import { dayLabel, timeLabel } from "@/lib/format";
 import { Shell, PageTitle } from "@/components/Shell";
 import { CreateMatchForm, ResultForm, SyncButton } from "./AdminForms";
+import { PlayersAccess, type PlayerRow } from "./PlayersAccess";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
   const user = await requireAdmin();
-  const [matches, users, preds] = await Promise.all([
+  const [matches, users, preds, players] = await Promise.all([
     prisma.match.findMany({
       where: { startTime: { gte: new Date(Date.now() - 10 * 864e5), lte: new Date(Date.now() + 3 * 864e5) } },
       orderBy: { startTime: "desc" },
@@ -17,7 +18,17 @@ export default async function AdminPage() {
     }),
     prisma.user.count(),
     prisma.prediction.count(),
+    prisma.user.findMany({
+      where: { displayName: { not: null } }, orderBy: { displayName: "asc" },
+      select: { id: true, displayName: true, createdAt: true, _count: { select: { predictions: true, sessions: true } },
+        predictions: { orderBy: { updatedAt: "desc" }, take: 1, select: { updatedAt: true } } },
+    }),
   ]);
+  const short = (d: Date) => new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", day: "numeric", month: "short" }).format(d);
+  const playerRows: PlayerRow[] = players.map((u) => ({
+    id: u.id, name: u.displayName!, createdAt: short(u.createdAt), lastActivity: u.predictions[0] ? short(u.predictions[0].updatedAt) : null,
+    predictions: u._count.predictions, devices: u._count.sessions,
+  }));
 
   return (
     <Shell user={user} active="/admin">
@@ -27,6 +38,12 @@ export default async function AdminPage() {
         <div className="card p-4"><div className="text-xs uppercase text-wina-muted">Pronos</div><div className="h-display text-3xl">{preds}</div></div>
         <div className="card p-4"><div className="text-xs uppercase text-wina-muted">Source</div><div className="h-display text-3xl">{config.provider}</div></div>
       </div>
+
+      <section className="card mb-8 p-5">
+        <h2 className="h-display mb-1 text-2xl">Accès des joueurs</h2>
+        <p className="mb-4 text-sm text-wina-muted">Un joueur a changé d&apos;appareil ou effacé ses cookies ? Crée-lui un lien d&apos;accès (24 h, usage unique) et envoie-le lui en message privé.</p>
+        <PlayersAccess players={playerRows} />
+      </section>
 
       <section className="card mb-8 space-y-3 p-5">
         <h2 className="h-display text-2xl">Synchronisation</h2>

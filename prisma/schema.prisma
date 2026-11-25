@@ -11,10 +11,6 @@ model User {
   id          String       @id @default(cuid())
   /// Facultatif : sert uniquement à retrouver le joueur sur Slack
   email       String?      @unique
-  /// Empreinte du code de récupération (jamais le code en clair)
-  recoveryHash        String?
-  recoveryFails       Int       @default(0)
-  recoveryLockedUntil DateTime?
   displayName String?      @unique
   /// Rappels Slack en message privé (désactivables depuis le profil)
   slackReminders Boolean   @default(true)
@@ -22,6 +18,7 @@ model User {
   slackId     String?
   createdAt   DateTime     @default(now())
   sessions     Session[]
+  accessLinks  AccessLink[]
   predictions  Prediction[]
   bracketPicks BracketPick[]
 }
@@ -119,4 +116,15 @@ model BracketPick {
 model ReminderLog {
   key       String   @id
   createdAt DateTime @default(now())
+}
+
+/// Lien d'accès à usage unique créé par un admin pour rendre son compte à un joueur (nouvel appareil, cookies effacés…)
+model AccessLink {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
 }

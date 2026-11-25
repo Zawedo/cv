@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC = ["/bienvenue", "/api/cron", "/admin/acces"];
+const PUBLIC = ["/bienvenue", "/acces", "/api/cron", "/admin/acces"];
 
 // Filtre rapide : sans cookie de joueur, on envoie vers la page d'accueil (choix du pseudo).
 // La validité réelle de la session est vérifiée côté serveur dans chaque page.

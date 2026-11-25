@@ -135,10 +135,6 @@ footer{border-top:1px solid var(--line);padding:24px 16px;text-align:center;font
   .mypos{display:flex!important;justify-content:space-between;align-items:center;text-align:left!important;padding:10px 14px!important}.mypos .d{font-size:24px!important}
   footer{display:none}
 }
-/* code de récupération */
-.code{display:inline-block;border:1px solid var(--gold);background:var(--ink);color:var(--gold);padding:8px 16px;font:800 italic 30px "Barlow Condensed",Impact,sans-serif;letter-spacing:.12em;user-select:all}
-.coderow{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:12px 0 6px}
-.wtabs{display:flex;gap:4px;margin-bottom:24px}.wtabs .btn{flex:1}
 .who a{text-decoration:none;display:flex;align-items:center;gap:8px;min-width:0;font-weight:700}.who a:hover{color:var(--red)}.who a svg{width:20px;height:20px;color:var(--muted);flex-shrink:0}
 /* classement par période */
 .prow{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:12px}
@@ -301,11 +297,6 @@ function seedMe(){MATCHES.filter(m=>m.st==="FINISHED").forEach(m=>{if(rnd()<.6)p
 if(me&&!store.get("seeded",false))seedMe();
 
 let view={page:me?"matchs":"login",vue:"avenir",lg:"",err:""};
-const CODE_ALPHA="ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-function newCode(){let c="";for(let i=0;i<8;i++)c+=CODE_ALPHA[Math.floor(Math.random()*CODE_ALPHA.length)];return c.slice(0,4)+"-"+c.slice(4)}
-const normCode=v=>{const c=v.toUpperCase().replace(/[^A-Z0-9]/g,"");return c.length===8?c.slice(0,4)+"-"+c.slice(4):c};
-function codeBlock(c){return`<div class="coderow"><span class="code">${c}</span><button class="btn btn-ghost" onclick="copyCode('${c}',this)">Copier</button></div><p class="muted" style="font-size:12px">Note-le quelque part (gestionnaire de mots de passe, note sur ton téléphone). Il ne sera plus affiché.</p>`}
-function copyCode(c,btn){try{navigator.clipboard.writeText(c).then(()=>{btn.textContent="Copié ✓"},()=>{})}catch{}}
 function resetDemo(){try{Object.keys(localStorage).filter(k=>k.startsWith("wlp_")).forEach(k=>localStorage.removeItem(k))}catch{}me=null;picks={};bpicks={};view={page:"login",vue:"avenir",lg:"",err:""};render()}
 // ---- helpers
 const TZ={timeZone:"Europe/Paris"};
@@ -425,17 +416,13 @@ function pageProfil(){
   const r=board("").find(x=>x.me),mine=MATCHES.filter(m=>picks[m.id]).slice().reverse(),pend=mine.filter(m=>m.st!=="FINISHED").length;
   const st=[["Rang","#"+r.rank],["Points",r.pts],["Bons vainqueurs",`${r.ok}/${r.pl}`],["Scores exacts",r.ex],["Outsiders",r.ud||0],["En attente",pend]];
   return shell(ptitle("Mon profil",esc(me))+`<div class="stats">${st.map(([l,v])=>`<div class="card stat"><small>${l}</small><div class="d">${v}</div></div>`).join("")}</div>`+
-  badgeGrid(badgesOf(-1))+recoveryBox()+slackBox()+
+  badgeGrid(badgesOf(-1))+slackBox()+
   (()=>{const mineB=BRACKETS.filter(b=>bpicks[b.slug]&&Object.keys(bpicks[b.slug]).length);if(!mineB.length)return"";
     return`<h2 class="d" style="font-size:26px;margin-bottom:12px">Tableaux</h2><div class="card" style="margin-bottom:32px">`+mineB.map(b=>{const x=scoreB(b,bpicks[b.slug]),fin=Object.keys(b.results).length;
       return`<button class="h" style="width:100%;grid-template-columns:auto 1fr auto;grid-template-areas:'tag teams pts'" onclick="openB('${b.slug}')"><span class="a"><span class="tag" style="background:${LG[b.event].color}">${LG[b.event].name}</span></span><span class="c">${b.name}</span><span class="f">${fin?`<b class="d" style="font-size:20px">+${x.pts}</b> <span class="muted">/ ${maxB(b.format)}</span>`:`<span class="muted">en attente</span>`}</span></button>`}).join("")+`</div>`})()+
   `<h2 class="d" style="font-size:26px;margin-bottom:12px">Historique</h2><div class="card" style="margin-bottom:40px">`+
   (mine.length?mine.map(m=>{const p=picks[m.id],x=m.st==="FINISHED"?scoreFull(m,p):null;
-    return`<div class="h"><span class="a"><span class="tag" style="background:${m.color}">${LG[m.league].name}</span></span><span class="b muted">${dayL(m.start)} · ${timeL(m.start)}</span><span class="c">${esc(dname(m.t1))} <span class="muted">vs</span> ${esc(dname(m.t2))}${x?` <span class="muted" style="font-weight:400">(${m.res[0]}-${m.res[1]})</span>`:""}</span><span class="e muted">Prono : <b style="color:#fff">${esc(dname(p[0]>p[1]?m.t1:m.t2))}</b>${m.bo>1?` (${p[0]}-${p[1]})`:""}</span><span class="f">${x?`<b class="d" style="font-size:20px;color:${x.pts?(x.ex?"var(--gold)":"var(--green)"):"var(--muted)"}">+${x.pts}${x.pts&&x.mult>1?`<span style="font-size:12px;color:var(--gold);margin-left:4px">×${fmtM(x.mult)}</span>`:""}</b>`:`<span class="muted">en attente</span>`}</span></div>`}).join(""):`<div class="muted" style="text-align:center;padding:40px">Aucun prono pour l'instant.</div>`)+`</div><div style="border-top:1px solid var(--line);padding-top:24px;font-size:14px" class="muted"><p style="margin-bottom:12px">Pour revenir sur ce compte après t'être déconnecté, il te faudra ton pseudo et ton code de récupération.</p><button class="btn btn-ghost" onclick="logout()">Se déconnecter de cet appareil</button></div>`)}
-function recoveryBox(){
-  return`<div class="card slackbox"><div><div class="d" style="font-size:22px">Code de récupération</div><p class="muted" style="font-size:14px;margin-top:2px">Il te permet de retrouver ton compte sur un autre appareil (téléphone, autre navigateur). Si tu l'as perdu, génères-en un nouveau : l'ancien ne marchera plus.</p></div>`+
-  (view.regen?codeBlock(view.regen):view.confirmRegen?`<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><span style="font-size:14px">L'ancien code ne marchera plus. Continuer ?</span><button class="btn btn-red" onclick="regenCode()">Oui, nouveau code</button><button class="btn btn-ghost" onclick="view.confirmRegen=false;render()">Annuler</button></div>`
-  :`<div><button class="btn btn-ghost" onclick="view.confirmRegen=true;render()">Générer un nouveau code</button></div>`)+`</div>`}
+    return`<div class="h"><span class="a"><span class="tag" style="background:${m.color}">${LG[m.league].name}</span></span><span class="b muted">${dayL(m.start)} · ${timeL(m.start)}</span><span class="c">${esc(dname(m.t1))} <span class="muted">vs</span> ${esc(dname(m.t2))}${x?` <span class="muted" style="font-weight:400">(${m.res[0]}-${m.res[1]})</span>`:""}</span><span class="e muted">Prono : <b style="color:#fff">${esc(dname(p[0]>p[1]?m.t1:m.t2))}</b>${m.bo>1?` (${p[0]}-${p[1]})`:""}</span><span class="f">${x?`<b class="d" style="font-size:20px;color:${x.pts?(x.ex?"var(--gold)":"var(--green)"):"var(--muted)"}">+${x.pts}${x.pts&&x.mult>1?`<span style="font-size:12px;color:var(--gold);margin-left:4px">×${fmtM(x.mult)}</span>`:""}</b>`:`<span class="muted">en attente</span>`}</span></div>`}).join(""):`<div class="muted" style="text-align:center;padding:40px">Aucun prono pour l'instant.</div>`)+`</div><div style="border-top:1px solid var(--line);padding-top:24px;font-size:14px" class="muted"><p style="margin-bottom:12px">Après t'être déconnecté, tu ne pourras revenir sur ce compte qu'avec un lien d'accès demandé à un admin.</p><button class="btn btn-ghost" onclick="logout()">Se déconnecter de cet appareil</button></div>`)}
 function slackBox(){const on=store.get("slack",true);
   const next=MATCHES.find(m=>m.st==="UPCOMING"&&!picks[m.id]);
   const ex=next?`<b>⏰ ${esc(dname(next.t1))} vs ${esc(dname(next.t2))} commence à ${timeL(next.start)} et tu n'as pas pronostiqué.</b><div class="lines">• <b>${esc(dname(next.t1))}</b> vs <b>${esc(dname(next.t2))}</b> · ${LG[next.league].name} · ${timeL(next.start)}</div>`
@@ -477,13 +464,10 @@ function pageBracket(){
   return shell(head+secs)}
 function pageLogin(){
   return`<div class="login"><section class="hero">${logo("big onred")}<div><h1 class="d">Pronostique.<br>Grimpe.<br>Domine.</h1><p>Le concours de pronos League of Legends réservé aux équipes Winamax. Tous les matchs des ligues majeures, un seul classement.</p></div><div style="display:flex;gap:8px">${LEAGUES.map(l=>`<span class="tag" style="background:var(--black);font-size:16px">${l.name}</span>`).join("")}</div></section>
-  <section class="side"><div>${view.newCode?`<h2 class="d" style="font-size:32px;margin-bottom:8px">C'est parti !</h2><p class="muted" style="font-size:14px">Voici ton code de récupération. Avec ton pseudo, il te permet de retrouver ton compte sur un autre appareil.</p>${codeBlock(view.newCode)}<button class="btn btn-red" style="width:100%;margin-top:16px" onclick="view.newCode=null;go('matchs')">J'ai noté mon code, voir les matchs</button>`
-  :`<div class="wtabs"><button class="btn ${view.page!=="back"?"btn-red":"btn-ghost"}" onclick="view.page='login';view.err='';render()">Nouveau joueur</button><button class="btn ${view.page==="back"?"btn-red":"btn-ghost"}" onclick="view.page='back';view.err='';render()">J'ai déjà un pseudo</button></div>`+
-  (view.page!=="back"?`<form onsubmit="setName(event)"><h2 class="d" style="font-size:32px;margin-bottom:8px">Choisis ton pseudo</h2><p class="muted" style="font-size:14px;margin-bottom:16px">Il apparaîtra dans le classement visible par tous les collègues. Pas d'email, pas de mot de passe.</p><label class="sr-only" for="nm" style="position:absolute;left:-9999px">Pseudo</label><input class="input" id="nm" required minlength="3" maxlength="20" placeholder="Ton pseudo"><button class="btn btn-red" style="width:100%;margin-top:12px">Commencer à jouer</button>${view.err?`<p class="err">${view.err}</p>`:""}</form>`
-  :`<form onsubmit="recover(event)"><h2 class="d" style="font-size:32px;margin-bottom:8px">Retrouver mon compte</h2><p class="muted" style="font-size:14px;margin-bottom:16px">Entre ton pseudo et le code de récupération reçu à ton inscription (ou généré depuis ton profil).</p><input class="input" id="rn" required placeholder="Ton pseudo" aria-label="Pseudo"><input class="input" id="rc" required placeholder="Code (ex. K7QM-4XPA)" aria-label="Code de récupération" autocomplete="off" style="margin-top:8px;text-transform:uppercase;letter-spacing:.1em"><button class="btn btn-red" style="width:100%;margin-top:12px">Retrouver mon compte</button>${view.err?`<p class="err">${view.err}</p>`:""}<p class="muted" style="font-size:12px;margin-top:12px">Code perdu ? Si tu es encore connecté sur un autre appareil, génères-en un nouveau depuis ton profil. Sinon, demande à un admin.</p></form>`)}</div></section></div>`}
-function render(){const p=view.page;document.body.classList.toggle("app",p!=="login"&&p!=="back");document.getElementById("app").innerHTML=p==="login"||p==="back"?pageLogin():p==="classement"?pageClassement():p==="joueur"?pagePlayer():p==="tableaux"?pageTableaux():p==="bracket"?pageBracket():p==="profil"?pageProfil():pageMatchs()}
+  <section class="side"><div><form onsubmit="setName(event)"><h2 class="d" style="font-size:32px;margin-bottom:8px">Choisis ton pseudo</h2><p class="muted" style="font-size:14px;margin-bottom:16px">Il apparaîtra dans le classement visible par tous les collègues. Pas d'email, pas de mot de passe.</p><input class="input" id="nm" required minlength="3" maxlength="20" placeholder="Ton pseudo" aria-label="Pseudo"><button class="btn btn-red" style="width:100%;margin-top:12px">Commencer à jouer</button>${view.err?`<p class="err">${view.err}</p>`:""}<p class="muted" style="font-size:12px;margin-top:20px">Tu as déjà joué sur un autre appareil ? Demande un lien d'accès à un admin pour retrouver ton compte.</p></form></div></section></div>`}
+function render(){const p=view.page;document.body.classList.toggle("app",p!=="login");document.getElementById("app").innerHTML=p==="login"?pageLogin():p==="classement"?pageClassement():p==="joueur"?pagePlayer():p==="tableaux"?pageTableaux():p==="bracket"?pageBracket():p==="profil"?pageProfil():pageMatchs()}
 // ---- actions
-function go(p){view.page=p;view.regen=null;view.confirmRegen=false;view.lg="";view.more=0;view.open=null;render();scrollTo(0,0)}
+function go(p){view.page=p;view.lg="";view.more=0;view.open=null;render();scrollTo(0,0)}
 function setLg(c){view.lg=c;view.more=0;render()}
 function setCv(k){view.cv=k;view.per="";render()}
 function setPer(id){view.per=id;render()}
@@ -497,16 +481,11 @@ function setVue(v){view.vue=v;render()}
 function choose(id,a,b){const m=MATCHES.find(x=>x.id===id);if(locked(m))return;picks[id]=[a,b];store.set("picks",picks);render();toast("Prono enregistré ✓")}
 function setName(e){e.preventDefault();const v=document.getElementById("nm").value.trim();
   if(!/^[\p{L}\p{N} _.\-]{3,20}$/u.test(v)){view.err="3 à 20 caractères : lettres, chiffres, espaces, _ . -";render();return}
-  if(PLAYERS.some(p=>p.toLowerCase()===v.toLowerCase())){view.err="Ce pseudo est déjà pris.";render();return}
-  me=v;store.set("me",me);const c=newCode();store.set("code",c);
+  if(PLAYERS.some(p=>p.toLowerCase()===v.toLowerCase())){view.err="Ce pseudo est déjà pris. Si c'est le tien, demande un lien d'accès à un admin.";render();return}
+  me=v;store.set("me",me);
   seedMe();
-  view={page:"login",vue:"avenir",lg:"",err:"",newCode:c};render()}
-function recover(e){e.preventDefault();const n=document.getElementById("rn").value.trim(),c=normCode(document.getElementById("rc").value);
-  // Démo : le compte est retrouvé s'il correspond au dernier pseudo créé dans ce navigateur
-  if(n&&n===store.get("lastMe","")&&c===store.get("code","")){me=n;store.set("me",me);view={page:"matchs",vue:"avenir",lg:"",err:""};render();return}
-  view.err="Pseudo ou code incorrect.";render()}
-function regenCode(){const c=newCode();store.set("code",c);view.regen=c;view.confirmRegen=false;render()}
-function logout(){store.set("lastMe",me);me=null;store.set("me",null);view={page:"back",vue:"avenir",lg:"",err:""};render()}
+  view={page:"matchs",vue:"avenir",lg:"",err:""};render()}
+function logout(){me=null;store.set("me",null);view={page:"login",vue:"avenir",lg:"",err:""};render()}
 render();
 </script>
 </body>

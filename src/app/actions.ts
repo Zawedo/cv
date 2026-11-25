@@ -3,61 +3,39 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { isValidEmail, normalizeEmail } from "@/lib/config";
-import { createSession, destroySession, getCurrentUser, requireAdmin, requireUser } from "@/lib/auth";
-import { LOCK_MINUTES, MAX_ATTEMPTS, codeMatches, hashCode, newRecoveryCode } from "@/lib/recovery";
+import { config, isValidEmail, normalizeEmail } from "@/lib/config";
+import { createSession, destroySession, getCurrentUser, hashToken, randomToken, requireAdmin, requireUser } from "@/lib/auth";
 import { isValidScore } from "@/lib/scoring";
 import { isLeagueCode } from "@/lib/leagues";
 import { settleMatch, syncMatches } from "@/lib/sync";
 
-export type FormState = { ok?: boolean; error?: string; message?: string; code?: string };
+export type FormState = { ok?: boolean; error?: string; message?: string; link?: string };
 
 const PSEUDO = /^[\p{L}\p{N} _.\-]{3,20}$/u;
 
 // ---------- Arrivée sur le site ----------
 
-/** Nouveau joueur : choisit un pseudo, reçoit son code de récupération. */
+/** Nouveau joueur : choisit un pseudo, c'est tout. */
 export async function createPlayer(_: FormState, form: FormData): Promise<FormState> {
-  if (await getCurrentUser()) redirect("/matchs");
+  if ((await getCurrentUser())?.displayName) redirect("/matchs");
   const name = String(form.get("displayName") ?? "").trim();
   if (!PSEUDO.test(name)) return { error: "3 à 20 caractères : lettres, chiffres, espaces, _ . -" };
   const taken = await prisma.user.findFirst({ where: { displayName: name } });
-  if (taken) return { error: "Ce pseudo est déjà pris. Si c'est le tien, utilise ton code de récupération." };
-  const code = newRecoveryCode();
-  const user = await prisma.user.create({ data: { displayName: name, recoveryHash: hashCode(code) } });
-  await createSession(user.id);
-  return { ok: true, code };
-}
-
-/** Joueur existant sur un nouvel appareil : pseudo + code de récupération. */
-export async function recoverPlayer(_: FormState, form: FormData): Promise<FormState> {
-  const name = String(form.get("displayName") ?? "").trim();
-  const code = String(form.get("code") ?? "");
-  const user = await prisma.user.findFirst({ where: { displayName: name } });
-  const wrong = { error: "Pseudo ou code incorrect." };
-  if (!user) return wrong;
-  if (user.recoveryLockedUntil && user.recoveryLockedUntil > new Date()) {
-    return { error: `Trop d'essais. Réessaie dans ${LOCK_MINUTES} minutes.` };
-  }
-  if (!codeMatches(code, user.recoveryHash)) {
-    const fails = user.recoveryFails + 1;
-    await prisma.user.update({
-      where: { id: user.id },
-      data: fails >= MAX_ATTEMPTS ? { recoveryFails: 0, recoveryLockedUntil: new Date(Date.now() + LOCK_MINUTES * 60e3) } : { recoveryFails: fails },
-    });
-    return wrong;
-  }
-  await prisma.user.update({ where: { id: user.id }, data: { recoveryFails: 0, recoveryLockedUntil: null } });
+  if (taken) return { error: "Ce pseudo est déjà pris. Si c'est le tien, demande un lien d'accès à un admin." };
+  const user = await prisma.user.create({ data: { displayName: name } });
   await createSession(user.id);
   redirect("/matchs");
 }
 
-/** Nouveau code (l'ancien ne marche plus). Affiché une seule fois. */
-export async function regenerateRecovery(): Promise<FormState> {
-  const user = await requireUser();
-  const code = newRecoveryCode();
-  await prisma.user.update({ where: { id: user.id }, data: { recoveryHash: hashCode(code), recoveryFails: 0, recoveryLockedUntil: null } });
-  return { ok: true, code };
+/** Ouverture d'un lien d'accès créé par un admin (formulaire POST : un aperçu automatique du lien ne le consomme pas). */
+export async function redeemAccessLink(form: FormData) {
+  const token = String(form.get("token") ?? "");
+  const link = await prisma.accessLink.findUnique({ where: { tokenHash: hashToken(token) } });
+  if (!link || link.usedAt || link.expiresAt < new Date()) redirect(`/acces/${encodeURIComponent(token)}?erreur=1`);
+  const claimed = await prisma.accessLink.updateMany({ where: { id: link.id, usedAt: null }, data: { usedAt: new Date() } });
+  if (claimed.count === 0) redirect(`/acces/${encodeURIComponent(token)}?erreur=1`);
+  await createSession(link.userId);
+  redirect("/matchs");
 }
 
 export async function logout() {
@@ -163,4 +141,29 @@ export async function adminCreateMatch(_: FormState, form: FormData): Promise<Fo
   });
   revalidatePath("/", "layout");
   return { ok: true, message: `${team1} vs ${team2} ajouté.` };
+}
+
+// ---------- Admin : accès des joueurs ----------
+
+const ACCESS_LINK_HOURS = 24;
+
+/** Lien à usage unique (24 h) pour qu'un joueur retrouve son compte. */
+export async function adminCreateAccessLink(userId: string): Promise<FormState> {
+  await requireAdmin();
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user?.displayName) return { error: "Joueur introuvable." };
+  const token = randomToken();
+  // un seul lien valide à la fois par joueur
+  await prisma.accessLink.updateMany({ where: { userId, usedAt: null }, data: { expiresAt: new Date() } });
+  await prisma.accessLink.create({ data: { userId, tokenHash: hashToken(token), expiresAt: new Date(Date.now() + ACCESS_LINK_HOURS * 36e5) } });
+  return { ok: true, link: `${config.appUrl}/acces/${token}`, message: `Lien pour ${user.displayName}, valable ${ACCESS_LINK_HOURS} h et utilisable une seule fois.` };
+}
+
+/** Déconnecte le joueur de tous ses appareils (et annule ses liens en cours). */
+export async function adminRevokeSessions(userId: string): Promise<FormState> {
+  await requireAdmin();
+  const { count } = await prisma.session.deleteMany({ where: { userId } });
+  await prisma.accessLink.updateMany({ where: { userId, usedAt: null }, data: { expiresAt: new Date() } });
+  revalidatePath("/admin");
+  return { ok: true, message: count ? `${count} appareil${count > 1 ? "s" : ""} déconnecté${count > 1 ? "s" : ""}.` : "Aucun appareil connecté." };
 }

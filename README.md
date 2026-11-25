@@ -5,7 +5,7 @@ Tous les matchs des ligues majeures (**LCK, LPL, LEC, LCS**) et des tournois int
 
 ## Fonctionnalités
 
-- **Accès sans connexion** : le site n'est pas indexé et son lien n'est partagé qu'en interne. À la première visite, on choisit un pseudo ; le navigateur le mémorise (cookie de session d'un an). Un **code de récupération** (ex. `K7QM-4XPA`), affiché à l'inscription et régénérable depuis le profil, permet de retrouver son compte sur un autre appareil. Il est stocké haché ; 5 mauvais essais bloquent le pseudo 15 minutes.
+- **Accès sans connexion** : le site n'est pas indexé et son lien n'est partagé qu'en interne. À la première visite, on choisit un pseudo ; le navigateur le mémorise (cookie de session d'un an). Pour retrouver son compte sur un autre appareil, un admin crée un **lien d'accès** à usage unique (valable 24 h) depuis `/admin`, section « Accès des joueurs » ; il peut aussi déconnecter tous les appareils d'un joueur.
 - **Pronos** sur chaque match : on choisit le score (2-0, 2-1, 1-2… selon le BO). Modifiable jusqu'au coup d'envoi, verrouillé côté serveur ensuite.
 - **Barème** (`src/lib/scoring.ts`) :
   | | BO1 | BO3 | BO5 |
@@ -81,7 +81,7 @@ Pour brancher une autre source (API officielle, PandaScore…), il suffit d'impl
 ## Sécurité
 
 - Pas de compte email : la confidentialité repose sur le lien du site, partagé uniquement en interne, et sur la non-indexation (`robots: noindex`).
-- Codes de récupération et jetons de session stockés hachés (SHA-256), comparaisons à temps constant ; 5 mauvais codes bloquent le pseudo 15 minutes.
+- Liens d'accès et jetons de session stockés hachés (SHA-256), lien à usage unique valable 24 h, consommé par un clic de confirmation (un aperçu automatique du lien ne le brûle pas).
 - Droits admin par lien secret ; le cookie admin ne contient qu'une empreinte de la clé.
 - Cookies `httpOnly`, `sameSite=lax`, `secure` en prod. Pronos des autres visibles seulement après le coup d'envoi.
 

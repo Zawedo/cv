@@ -6,7 +6,7 @@ import { prisma } from "./db";
 import { config } from "./config";
 
 // Pas de connexion par email : un joueur = un pseudo, mémorisé par un cookie de session.
-// Sur un autre appareil, il se retrouve avec son code de récupération.
+// Sur un autre appareil, un admin lui crée un lien d'accès à usage unique.
 export const SESSION_COOKIE = "wlp_session";
 export const ADMIN_COOKIE = "wlp_admin";
 const SESSION_DAYS = 365;
